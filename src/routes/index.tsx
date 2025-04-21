@@ -12,7 +12,6 @@ function Home() {
           <div className="title-bar-text">Welcome!</div>
           <div className="title-bar-controls">
             <button aria-label="Help" />
-            <button aria-label="Close" />
           </div>
         </div>
 
