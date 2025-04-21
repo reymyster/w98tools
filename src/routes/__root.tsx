@@ -11,7 +11,6 @@ import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
-import "98.css";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -31,6 +30,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: "https://unpkg.com/98.css" },
       {
         rel: "apple-touch-icon",
         sizes: "180x180",
