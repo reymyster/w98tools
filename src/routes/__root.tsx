@@ -101,7 +101,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <li>
               String Utils
               <ul>
-                <li>Replace</li>
+                <li>
+                  <Link
+                    to="/replace"
+                    activeProps={{ className: "font-bold" }}
+                    activeOptions={{ exact: true }}
+                  >
+                    Replace
+                  </Link>
+                </li>
                 <li>Split</li>
               </ul>
             </li>
