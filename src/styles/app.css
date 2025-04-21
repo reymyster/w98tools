@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
 @layer base {
   html {
     color-scheme: light dark;
@@ -18,5 +19,15 @@
 
   .using-mouse * {
     outline: none !important;
+  }
+}
+*/
+
+@layer base {
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    background-color: revert;
   }
 }
