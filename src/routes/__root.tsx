@@ -98,6 +98,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 Posts
               </Link>
             </li>
+            <li>
+              String Utils
+              <ul>
+                <li>Replace</li>
+                <li>Split</li>
+              </ul>
+            </li>
           </ul>
         </aside>
         {/* <div className="p-2 flex gap-2 text-lg">
