@@ -77,7 +77,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="grid grid-cols-[200px_auto]">
+      <body className="grid grid-cols-[200px_auto] bg-gradient-to-br from-slate-100 to-slate-400">
         <aside className="p-2 h-svh">
           <ul className="tree-view h-full">
             <li>
