@@ -8,7 +8,7 @@ function SearchAndReplace() {
   const navigate = useNavigate();
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto flex flex-col gap-2 lg:gap-4">
+    <div className="p-4 lg:p-8 max-w-5xl h-full mx-auto flex flex-col justify-center gap-2 lg:gap-4">
       <div>
         <div className="window w-full">
           <div className="title-bar">
