@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   return (
-    <div className="h-svh flex justify-center items-center">
+    <div className="h-full flex justify-center items-center -mt-[60px] md:mt-0 md:-ml-[100px]">
       <div className="window w-72">
         <div className="title-bar">
           <div className="title-bar-text">Welcome!</div>
@@ -25,7 +25,6 @@ function Home() {
 
         <div className="status-bar">
           <p className="status-bar-field">Press F1 for help</p>
-          <p className="status-bar-field">&nbsp;</p>
           <p className="status-bar-field">Implementation: 14%</p>
         </div>
       </div>

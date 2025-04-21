@@ -77,8 +77,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="grid grid-cols-[200px_auto] bg-gradient-to-br from-slate-100 to-slate-400">
-        <aside className="p-2 h-svh">
+      <body className="h-svh grid grid-rows-[120px_auto] md:grid-rows-1 md:grid-cols-[200px_auto] bg-gradient-to-br from-slate-100 to-slate-400">
+        <aside className="p-2 h-[120px] md:h-svh">
           <ul className="tree-view h-full">
             <li>
               <Link
@@ -152,7 +152,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             This Route Does Not Exist
           </Link>
         </div> */}
-        <main className="max-h-svh overflow-auto">{children}</main>
+        <main className="h-[calc(100svh_-_120px)] md:h-svh md:max-h-svh overflow-auto">
+          {children}
+        </main>
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
