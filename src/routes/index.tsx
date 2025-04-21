@@ -17,7 +17,16 @@ function Home() {
         </div>
 
         <div className="window-body">
-          <p className="text-center">Welcome Home!</p>
+          <p>Welcome Home!</p>
+          <ul>
+            <li>Try to enjoy!</li>
+          </ul>
+        </div>
+
+        <div className="status-bar">
+          <p className="status-bar-field">Press F1 for help</p>
+          <p className="status-bar-field">&nbsp;</p>
+          <p className="status-bar-field">Implementation: 14%</p>
         </div>
       </div>
     </div>
