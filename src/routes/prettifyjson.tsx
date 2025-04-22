@@ -9,15 +9,23 @@ function PrettifyJSON() {
   const navigate = useNavigate();
   const [txtSource, setSource] = useState("");
   const [txtOutput, setOutput] = useState("");
+  const [valid, setValid] = useState(true);
 
   useEffect(() => {
-    if (!txtSource) return;
+    if (!txtSource) {
+      setOutput("");
+      setValid(true);
+      return;
+    }
 
     try {
       const parsed = JSON.parse(txtSource);
       setOutput(JSON.stringify(parsed, null, 5));
-    } catch (err) {}
-  }, [txtSource, setOutput]);
+      setValid(true);
+    } catch (err) {
+      setValid(false);
+    }
+  }, [txtSource, setOutput, setValid]);
 
   const copy = async () => {
     try {
@@ -70,6 +78,16 @@ function PrettifyJSON() {
               Copy
             </button>
           </div>
+        </div>
+
+        <div className="status-bar">
+          <p className="status-bar-field text-red-500">
+            <span
+              dangerouslySetInnerHTML={{
+                __html: valid ? "&nbsp;" : "Invalid JSON.",
+              }}
+            ></span>
+          </p>
         </div>
       </div>
     </div>
