@@ -23,6 +23,13 @@ function Home() {
             </li>
             <li>Split</li>
           </ul>
+          <p>Prettify</p>
+          <ul>
+            <li>
+              <Link to={"/prettifyjson"}>JSON</Link>
+            </li>
+            <li>SQL</li>
+          </ul>
         </div>
 
         <div className="status-bar">

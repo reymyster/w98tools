@@ -13,6 +13,7 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as ReplaceImport } from './routes/replace'
 import { Route as RedirectImport } from './routes/redirect'
+import { Route as PrettifyjsonImport } from './routes/prettifyjson'
 import { Route as DeferredImport } from './routes/deferred'
 import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
 import { Route as UsersRouteImport } from './routes/users.route'
@@ -38,6 +39,12 @@ const ReplaceRoute = ReplaceImport.update({
 const RedirectRoute = RedirectImport.update({
   id: '/redirect',
   path: '/redirect',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const PrettifyjsonRoute = PrettifyjsonImport.update({
+  id: '/prettifyjson',
+  path: '/prettifyjson',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -158,6 +165,13 @@ declare module '@tanstack/react-router' {
       path: '/deferred'
       fullPath: '/deferred'
       preLoaderRoute: typeof DeferredImport
+      parentRoute: typeof rootRoute
+    }
+    '/prettifyjson': {
+      id: '/prettifyjson'
+      path: '/prettifyjson'
+      fullPath: '/prettifyjson'
+      preLoaderRoute: typeof PrettifyjsonImport
       parentRoute: typeof rootRoute
     }
     '/redirect': {
@@ -299,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRouteRouteWithChildren
   '': typeof PathlessLayoutNestedLayoutRouteWithChildren
   '/deferred': typeof DeferredRoute
+  '/prettifyjson': typeof PrettifyjsonRoute
   '/redirect': typeof RedirectRoute
   '/replace': typeof ReplaceRoute
   '/posts/$postId': typeof PostsPostIdRoute
@@ -314,6 +329,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '': typeof PathlessLayoutNestedLayoutRouteWithChildren
   '/deferred': typeof DeferredRoute
+  '/prettifyjson': typeof PrettifyjsonRoute
   '/redirect': typeof RedirectRoute
   '/replace': typeof ReplaceRoute
   '/posts/$postId': typeof PostsPostIdRoute
@@ -332,6 +348,7 @@ export interface FileRoutesById {
   '/users': typeof UsersRouteRouteWithChildren
   '/_pathlessLayout': typeof PathlessLayoutRouteWithChildren
   '/deferred': typeof DeferredRoute
+  '/prettifyjson': typeof PrettifyjsonRoute
   '/redirect': typeof RedirectRoute
   '/replace': typeof ReplaceRoute
   '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
@@ -352,6 +369,7 @@ export interface FileRouteTypes {
     | '/users'
     | ''
     | '/deferred'
+    | '/prettifyjson'
     | '/redirect'
     | '/replace'
     | '/posts/$postId'
@@ -366,6 +384,7 @@ export interface FileRouteTypes {
     | '/'
     | ''
     | '/deferred'
+    | '/prettifyjson'
     | '/redirect'
     | '/replace'
     | '/posts/$postId'
@@ -382,6 +401,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/_pathlessLayout'
     | '/deferred'
+    | '/prettifyjson'
     | '/redirect'
     | '/replace'
     | '/_pathlessLayout/_nested-layout'
@@ -401,6 +421,7 @@ export interface RootRouteChildren {
   UsersRouteRoute: typeof UsersRouteRouteWithChildren
   PathlessLayoutRoute: typeof PathlessLayoutRouteWithChildren
   DeferredRoute: typeof DeferredRoute
+  PrettifyjsonRoute: typeof PrettifyjsonRoute
   RedirectRoute: typeof RedirectRoute
   ReplaceRoute: typeof ReplaceRoute
   PostsPostIdDeepRoute: typeof PostsPostIdDeepRoute
@@ -412,6 +433,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersRouteRoute: UsersRouteRouteWithChildren,
   PathlessLayoutRoute: PathlessLayoutRouteWithChildren,
   DeferredRoute: DeferredRoute,
+  PrettifyjsonRoute: PrettifyjsonRoute,
   RedirectRoute: RedirectRoute,
   ReplaceRoute: ReplaceRoute,
   PostsPostIdDeepRoute: PostsPostIdDeepRoute,
@@ -432,6 +454,7 @@ export const routeTree = rootRoute
         "/users",
         "/_pathlessLayout",
         "/deferred",
+        "/prettifyjson",
         "/redirect",
         "/replace",
         "/posts_/$postId/deep"
@@ -462,6 +485,9 @@ export const routeTree = rootRoute
     },
     "/deferred": {
       "filePath": "deferred.tsx"
+    },
+    "/prettifyjson": {
+      "filePath": "prettifyjson.tsx"
     },
     "/redirect": {
       "filePath": "redirect.tsx"

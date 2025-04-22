@@ -112,6 +112,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 <li>Split</li>
               </ul>
             </li>
+            <li>
+              Prettify
+              <ul>
+                <li>
+                  <Link
+                    to="/prettifyjson"
+                    activeProps={{ className: "font-bold" }}
+                    activeOptions={{ exact: true }}
+                  >
+                    JSON
+                  </Link>
+                </li>
+                <li>SQL</li>
+              </ul>
+            </li>
           </ul>
         </aside>
         <main className="h-[calc(100svh_-_120px)] md:h-svh md:max-h-svh overflow-auto">
