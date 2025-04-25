@@ -1,40 +1,38 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
+import "98.css";
 import { Toaster } from "@/components/ui/sonner";
-import { toast } from "sonner";
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="h-svh p-2 bg-gradient-to-br from-slate-100 to-slate-400">
+        <div className="window w-72">
+          <div className="title-bar">
+            <div className="title-bar-text">Home</div>
+            <div className="title-bar-controls">
+              <button aria-label="Help" />
+            </div>
+          </div>
+
+          <div className="window-body">
+            <p>String Utilities</p>
+            <ul>
+              <li>Search & Replace</li>
+              <li>Split</li>
+            </ul>
+            <p>Prettify</p>
+            <ul>
+              <li>JSON</li>
+              <li>SQL</li>
+            </ul>
+          </div>
+
+          <div className="status-bar">
+            <p className="status-bar-field">Press F1 for help</p>
+            <p className="status-bar-field">Implementated: 14%</p>
+          </div>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button
-          onClick={() => {
-            setCount((count) => count + 1);
-            toast("count has been incremented.");
-          }}
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
       <Toaster />
     </>
   );

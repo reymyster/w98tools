@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@layer base {
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    background-color: revert;
+  }
+
+  ol, ul {
+    list-style: revert;
+    margin: revert;
+    padding: revert;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
