@@ -1,14 +1,9 @@
-import "./App.css";
-import "98.css";
-import { Toaster } from "@/components/ui/sonner";
+import { StartBar } from "./start-bar";
 
-import { WindowManager } from "@/components/window-manager";
-
-function App() {
+export function WindowManager() {
   return (
-    <>
-      <WindowManager />
-      {/* <div className="h-svh p-2 bg-gradient-to-br from-slate-100 to-slate-400">
+    <div className="h-svh grid grid-rows-[auto_3.1rem] bg-gradient-to-br from-slate-300 to-[#008080]">
+      <main className="p-4">
         <div className="window w-72">
           <div className="title-bar">
             <div className="title-bar-text">Home</div>
@@ -35,10 +30,8 @@ function App() {
             <p className="status-bar-field">Implementated: 14%</p>
           </div>
         </div>
-      </div> */}
-      <Toaster />
-    </>
+      </main>
+      <StartBar />
+    </div>
   );
 }
-
-export default App;
