@@ -24,7 +24,14 @@ export function StartBarTime() {
     };
   }, []);
 
-  return <div id="status-time">{time}</div>;
+  return (
+    <div
+      id="status-time"
+      className="w-[5rem] flex items-center justify-center font-sans font-light text-base shadow-[0_2px_white,_0_-2px_#7d7d7d,_-2px_-2px_#7d7d7d,_2px_2px_white,_-2px_2px_#7d7d7d,_2px_-2px_white]"
+    >
+      {time}
+    </div>
+  );
 }
 
 function getFormattedTime(): string {
