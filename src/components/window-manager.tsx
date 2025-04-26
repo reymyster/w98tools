@@ -4,7 +4,7 @@ import { Window } from "./window";
 export function WindowManager() {
   return (
     <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080]">
-      <main className="p-4">
+      <main className="mr-2.5 mb-2">
         <div className="window w-72">
           <div className="title-bar">
             <div className="title-bar-text">Home</div>

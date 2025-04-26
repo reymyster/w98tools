@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { Rnd } from "react-rnd";
 import { cn } from "@/lib/utils";
 
 export interface WindowContainerProps
@@ -6,7 +7,23 @@ export interface WindowContainerProps
 
 const Container = React.forwardRef<HTMLDivElement, WindowContainerProps>(
   ({ className, ...props }, ref) => {
-    return <div ref={ref} className={cn("window", className)} {...props} />;
+    const [state, setState] = useState({ x: 50, y: 50 });
+
+    return (
+      <Rnd
+        size={{ width: 300, height: 300 }}
+        position={{ x: state.x, y: state.y }}
+        onDragStop={(_, data) => setState({ x: data.x, y: data.y })}
+        dragHandleClassName="title-bar"
+        bounds={"parent"}
+      >
+        <div
+          ref={ref}
+          className={cn("window h-full flex flex-col", className)}
+          {...props}
+        />
+      </Rnd>
+    );
   }
 );
 Container.displayName = "WindowContainer";
@@ -15,7 +32,7 @@ const TitleBar = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("title-bar", className)} {...props} />
+  <div ref={ref} className={cn("title-bar grow-0", className)} {...props} />
 ));
 TitleBar.displayName = "WindowTitleBar";
 
@@ -51,7 +68,7 @@ const Body = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("window-body", className)} {...props} />
+  <div ref={ref} className={cn("window-body grow", className)} {...props} />
 ));
 Body.displayName = "WindowBody";
 
@@ -59,7 +76,7 @@ const StatusBar = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("status-bar", className)} {...props} />
+  <div ref={ref} className={cn("status-bar grow-0", className)} {...props} />
 ));
 StatusBar.displayName = "WindowStatusBar";
 
