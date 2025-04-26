@@ -1,4 +1,5 @@
 import { StartBar } from "./start-bar";
+import { Window } from "./window";
 
 export function WindowManager() {
   return (
@@ -30,6 +31,30 @@ export function WindowManager() {
             <p className="status-bar-field">Implementated: 14%</p>
           </div>
         </div>
+        <Window.Container>
+          <Window.TitleBar>
+            <Window.TitleBarText>Home</Window.TitleBarText>
+            <Window.TitleBarControls>
+              <Window.TitleBarControlButton buttonType="Help" />
+            </Window.TitleBarControls>
+          </Window.TitleBar>
+          <Window.Body>
+            <p>String Utilities</p>
+            <ul>
+              <li>Search & Replace</li>
+              <li>Split</li>
+            </ul>
+            <p>Prettify</p>
+            <ul>
+              <li>JSON</li>
+              <li>SQL</li>
+            </ul>
+          </Window.Body>
+          <Window.StatusBar>
+            <Window.StatusBarField>Press F1 for help.</Window.StatusBarField>
+            <Window.StatusBarField>Impelemented: 14%</Window.StatusBarField>
+          </Window.StatusBar>
+        </Window.Container>
       </main>
       <StartBar />
     </div>
