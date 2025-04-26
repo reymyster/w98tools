@@ -32,7 +32,11 @@ const TitleBar = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("title-bar grow-0", className)} {...props} />
+  <div
+    ref={ref}
+    className={cn("title-bar grow-0 cursor-move", className)}
+    {...props}
+  />
 ));
 TitleBar.displayName = "WindowTitleBar";
 
