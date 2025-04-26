@@ -27,7 +27,7 @@ export function StartBarTime() {
   return (
     <div
       id="status-time"
-      className="w-[5rem] flex items-center justify-center font-sans font-light text-base shadow-[0_2px_white,_0_-2px_#7d7d7d,_-2px_-2px_#7d7d7d,_2px_2px_white,_-2px_2px_#7d7d7d,_2px_-2px_white]"
+      className="h-full w-[5rem] flex items-center justify-center font-mono font-light text-base shadow-[0_2px_white,_0_-2px_#7d7d7d,_-2px_-2px_#7d7d7d,_2px_2px_white,_-2px_2px_#7d7d7d,_2px_-2px_white]"
     >
       {time}
     </div>
@@ -38,7 +38,7 @@ function getFormattedTime(): string {
   const date = new Date();
   let hours = date.getHours();
   const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "pm" : "am";
+  const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12 || 12;
   const minutesStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
   return `${hours}:${minutesStr}${ampm}`;

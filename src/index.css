@@ -9,6 +9,11 @@
     background-color: revert;
   }
 
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   ol, ul {
     list-style: revert;
     margin: revert;

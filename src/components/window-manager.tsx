@@ -2,7 +2,7 @@ import { StartBar } from "./start-bar";
 
 export function WindowManager() {
   return (
-    <div className="h-svh grid grid-rows-[auto_3.1rem] bg-gradient-to-br from-slate-300 to-[#008080]">
+    <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080]">
       <main className="p-4">
         <div className="window w-72">
           <div className="title-bar">
