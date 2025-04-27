@@ -1,5 +1,4 @@
 import { StartBar } from "./start-bar";
-import { Widget } from "@/components/widget";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { create } from "zustand";
 
@@ -36,8 +35,8 @@ export function WindowManager() {
   return (
     <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080] overflow-hidden">
       <main className="mr-2.5 mb-2">
-        {windows.map((w, i) => (
-          <WelcomeWidget key={i} id={w.id} />
+        {windows.map((w) => (
+          <WelcomeWidget key={w.id} id={w.id} />
         ))}
         {/* <Widget initialHeight={230} initialWidth={250} windowID={15}>
           <Widget.Title>Welcome!</Widget.Title>
