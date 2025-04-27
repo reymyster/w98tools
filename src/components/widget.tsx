@@ -95,10 +95,11 @@ export function Widget({
     <Rnd
       size={{ width: widgetWidth, height: widgetHeight }}
       position={{ x: widgetX, y: widgetY }}
+      onDragStart={bringMeToTop}
       onDragStop={(_, data) => {
         setState((prev) => ({ ...prev, x: data.x, y: data.y }));
-        bringMeToTop();
       }}
+      onResizeStart={bringMeToTop}
       onResizeStop={(_, __, ref, ___, pos) => {
         setState((prev) => ({
           ...prev,
@@ -107,7 +108,6 @@ export function Widget({
           x: pos.x,
           y: pos.y,
         }));
-        bringMeToTop();
       }}
       style={{ zIndex }}
       onClick={bringMeToTop}
