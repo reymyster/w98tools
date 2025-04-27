@@ -1,5 +1,6 @@
 #start-bar {
     -webkit-font-smoothing: none;
+    --start-menu-height: 384px;
 }
 
 #start-button {
@@ -17,18 +18,19 @@
     cursor: pointer;
 }
 
+#start-bar .windows-box-shadow {
+    box-shadow: -2px -2px #e0dede, -2px 0 #e0dede, 0 -2px #e0dede, -4px -4px white, -4px 0 white, 0 -4px white, 2px 2px #818181, 0 2px #818181, 2px 0 #818181,  2px -2px #e0dede, -2px 2px #818181, -4px 2px white, -4px 4px black, 4px 4px black, 4px 0 black, 0 4px black, 2px -4px white, 4px -4px black;
+}
+
 #start-menu {
     display: none;
     position: absolute;
     left: 0.25rem;
     bottom: 3.25rem;
     background: #c0c0c0;
-    width: 24rem;
-    min-height: 24rem;
+    width: 20rem;
+    min-height: var(--start-menu-height);
     user-select: none;
-
-
-    box-shadow: -2px -2px #e0dede, -2px 0 #e0dede, 0 -2px #e0dede, -4px -4px white, -4px 0 white, 0 -4px white, 2px 2px #818181, 0 2px #818181, 2px 0 #818181,  2px -2px #e0dede, -2px 2px #818181, -4px 2px white, -4px 4px black, 4px 4px black, 4px 0 black, 0 4px black, 2px -4px white, 4px -4px black;
 }
 
 #start-button-input:checked ~ #start-menu {
@@ -40,13 +42,13 @@
     font-weight: 900;
     position: absolute;
     transform: rotateZ(-90deg);
-    width: 24rem;
+    width: var(--start-menu-height);
     font-size: 1.25rem;
     font-family: "Arial Black", sans-serif;
     background: #011590;
     left: 0;
     transform-origin: 0 0;
-    top: 24rem;
+    top: var(--start-menu-height);
     box-sizing: border-box;
     padding: 0.125rem 0.75rem;
 
@@ -54,4 +56,22 @@
         font-weight: 100;
         font-family: "Arial", sans-serif;
     }
+}
+
+#programs {
+    position: relative;
+}
+
+#programs > label::after {
+    content: '';
+    border-width: 5px;
+    border-style: solid;
+    position: absolute;
+    top: 1.5rem;
+    right: 0.25rem;
+    border-color: transparent transparent transparent black;
+}
+
+#programs:hover > label::after {
+    border-color: transparent transparent transparent white;
 }

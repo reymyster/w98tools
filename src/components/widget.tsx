@@ -18,10 +18,16 @@ export function Widget({
   ...props
 }: WidgetProps) {
   const removeWindow = useWindowMangager((state) => state.removeWindow);
+  const bringToTop = useWindowMangager((state) => state.bringToTop);
+  const zIndex = useWindowMangager(
+    (state) => state.windows.find((w) => w.id === windowID)?.zIndex ?? 0
+  );
   const { width: windowWidth = 0, height: windowHeight = 0 } = useWindowSize();
   const bounds = { width: windowWidth, height: windowHeight - 48 };
   const initialX = Math.max((bounds.width - initialWidth) / 2, 0);
   const initialY = Math.max((bounds.height - initialHeight) / 2, 0);
+
+  const bringMeToTop = () => bringToTop(windowID);
 
   const [state, setState] = useState({
     x: initialX,
@@ -89,9 +95,22 @@ export function Widget({
     <Rnd
       size={{ width: widgetWidth, height: widgetHeight }}
       position={{ x: widgetX, y: widgetY }}
-      onDragStop={(_, data) =>
-        setState((prev) => ({ ...prev, x: data.x, y: data.y }))
-      }
+      onDragStop={(_, data) => {
+        setState((prev) => ({ ...prev, x: data.x, y: data.y }));
+        bringMeToTop();
+      }}
+      onResizeStop={(_, __, ref, ___, pos) => {
+        setState((prev) => ({
+          ...prev,
+          width: ref.offsetWidth,
+          height: ref.offsetHeight,
+          x: pos.x,
+          y: pos.y,
+        }));
+        bringMeToTop();
+      }}
+      style={{ zIndex }}
+      onClick={bringMeToTop}
       dragHandleClassName="title-bar"
       bounds={"parent"}
       enableResizing={!state.isMaximized && !state.isMinimized}
