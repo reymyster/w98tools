@@ -1,20 +1,10 @@
 import { StartBar } from "./start-bar";
 import { Widget } from "@/components/widget";
+import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { create } from "zustand";
 
 export type WindowState = {
   id: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  zIndex: number;
-  isMinimized: boolean;
-  isMaximized: boolean;
-  prevX?: number;
-  prevY?: number;
-  prevWidth?: number;
-  prevHeight?: number;
 };
 
 type WindowManagerState = {
@@ -24,12 +14,13 @@ type WindowManagerState = {
 type WindowManagerAction = {
   addWindow: () => void;
   removeWindow: (id: WindowState["id"]) => void;
+  reset: () => void;
 };
 
 export const useWindowMangager = create<
   WindowManagerState & WindowManagerAction
 >((set) => ({
-  windows: [],
+  windows: [{ id: Date.now() }],
   addWindow: () => console.log("Add Window?"),
   removeWindow: (id) => {
     set((prev) => ({
@@ -37,13 +28,18 @@ export const useWindowMangager = create<
     }));
     console.log(`remove window ${id}`);
   },
+  reset: () => set({ windows: [{ id: Date.now() }] }),
 }));
 
 export function WindowManager() {
+  const windows = useWindowMangager((state) => state.windows);
   return (
     <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080] overflow-hidden">
       <main className="mr-2.5 mb-2">
-        <Widget initialHeight={230} initialWidth={250}>
+        {windows.map((w, i) => (
+          <WelcomeWidget key={i} id={w.id} />
+        ))}
+        {/* <Widget initialHeight={230} initialWidth={250} windowID={15}>
           <Widget.Title>Welcome!</Widget.Title>
           <Widget.Body>
             <p>String Utilities</p>
@@ -61,7 +57,7 @@ export function WindowManager() {
             Press <span className="font-bold">Start</span> to begin.
           </Widget.Status>
           <Widget.Status>Implemented: 14%</Widget.Status>
-        </Widget>
+        </Widget> */}
       </main>
       <StartBar />
     </div>

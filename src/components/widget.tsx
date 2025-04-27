@@ -2,18 +2,22 @@ import React, { useState, type ReactNode } from "react";
 import { Rnd } from "react-rnd";
 import { useWindowSize } from "usehooks-ts";
 import { Window, type WindowContainerProps } from "@/components/window";
+import { useWindowMangager } from "@/components/window-manager";
 
 export interface WidgetProps extends WindowContainerProps {
+  windowID: number;
   initialHeight?: number;
   initialWidth?: number;
 }
 
 export function Widget({
+  windowID,
   children,
   initialHeight = 300,
   initialWidth = 300,
   ...props
 }: WidgetProps) {
+  const removeWindow = useWindowMangager((state) => state.removeWindow);
   const { width: windowWidth = 0, height: windowHeight = 0 } = useWindowSize();
   const bounds = { width: windowWidth, height: windowHeight - 48 };
   const initialX = Math.max((bounds.width - initialWidth) / 2, 0);
@@ -79,6 +83,8 @@ export function Widget({
       prevY: 0,
     }));
 
+  const close = () => removeWindow(windowID);
+
   return (
     <Rnd
       size={{ width: widgetWidth, height: widgetHeight }}
@@ -112,7 +118,7 @@ export function Widget({
                 onClick={maximize}
               />
             )}
-            <Window.TitleBarControlButton buttonType="Close" />
+            <Window.TitleBarControlButton buttonType="Close" onClick={close} />
           </Window.TitleBarControls>
         </Window.TitleBar>
         {!state.isMinimized && body}
