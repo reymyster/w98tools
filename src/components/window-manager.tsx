@@ -44,7 +44,6 @@ export const useWindowMangager = create<
 
 export function WindowManager() {
   const windows = useWindowMangager((state) => state.windows);
-  console.table(windows);
   return (
     <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080] overflow-hidden">
       <main className="mr-2.5 mb-2">

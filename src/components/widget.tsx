@@ -85,8 +85,6 @@ export function Widget({
 
   const close = () => removeWindow(windowID);
 
-  console.table({ windowID, widgetWidth, widgetHeight, widgetX, widgetY });
-
   return (
     <Rnd
       size={{ width: widgetWidth, height: widgetHeight }}
