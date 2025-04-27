@@ -23,12 +23,3 @@ export function Welcome({ id }: { id: number }) {
     </Widget>
   );
 }
-
-export function TestWidget({ id }: { id: number }) {
-  return (
-    <Widget initialHeight={400} initialWidth={400} windowID={id}>
-      <Widget.Title>Test!</Widget.Title>
-      <Widget.Body>Test!</Widget.Body>
-    </Widget>
-  );
-}
