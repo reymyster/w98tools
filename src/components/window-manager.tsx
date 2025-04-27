@@ -1,19 +1,51 @@
 import { StartBar } from "./start-bar";
-import { Window } from "./window";
+import { Widget } from "@/components/widget";
+import { create } from "zustand";
+
+export type WindowState = {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  isMinimized: boolean;
+  isMaximized: boolean;
+  prevX?: number;
+  prevY?: number;
+  prevWidth?: number;
+  prevHeight?: number;
+};
+
+type WindowManagerState = {
+  windows: WindowState[];
+};
+
+type WindowManagerAction = {
+  addWindow: () => void;
+  removeWindow: (id: WindowState["id"]) => void;
+};
+
+export const useWindowMangager = create<
+  WindowManagerState & WindowManagerAction
+>((set) => ({
+  windows: [],
+  addWindow: () => console.log("Add Window?"),
+  removeWindow: (id) => {
+    set((prev) => ({
+      windows: prev.windows.filter((window) => window.id !== id),
+    }));
+    console.log(`remove window ${id}`);
+  },
+}));
 
 export function WindowManager() {
   return (
-    <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080]">
+    <div className="h-svh grid grid-rows-[auto_48px] bg-gradient-to-br from-slate-300 to-[#008080] overflow-hidden">
       <main className="mr-2.5 mb-2">
-        <div className="window w-72">
-          <div className="title-bar">
-            <div className="title-bar-text">Home</div>
-            <div className="title-bar-controls">
-              <button aria-label="Help" />
-            </div>
-          </div>
-
-          <div className="window-body">
+        <Widget initialHeight={230} initialWidth={250}>
+          <Widget.Title>Welcome!</Widget.Title>
+          <Widget.Body>
             <p>String Utilities</p>
             <ul>
               <li>Search & Replace</li>
@@ -24,37 +56,12 @@ export function WindowManager() {
               <li>JSON</li>
               <li>SQL</li>
             </ul>
-          </div>
-
-          <div className="status-bar">
-            <p className="status-bar-field">Press F1 for help</p>
-            <p className="status-bar-field">Implementated: 14%</p>
-          </div>
-        </div>
-        <Window.Container>
-          <Window.TitleBar>
-            <Window.TitleBarText>Home</Window.TitleBarText>
-            <Window.TitleBarControls>
-              <Window.TitleBarControlButton buttonType="Help" />
-            </Window.TitleBarControls>
-          </Window.TitleBar>
-          <Window.Body>
-            <p>String Utilities</p>
-            <ul>
-              <li>Search & Replace</li>
-              <li>Split</li>
-            </ul>
-            <p>Prettify</p>
-            <ul>
-              <li>JSON</li>
-              <li>SQL</li>
-            </ul>
-          </Window.Body>
-          <Window.StatusBar>
-            <Window.StatusBarField>Press F1 for help.</Window.StatusBarField>
-            <Window.StatusBarField>Impelemented: 14%</Window.StatusBarField>
-          </Window.StatusBar>
-        </Window.Container>
+          </Widget.Body>
+          <Widget.Status>
+            Press <span className="font-bold">Start</span> to begin.
+          </Widget.Status>
+          <Widget.Status>Implemented: 14%</Widget.Status>
+        </Widget>
       </main>
       <StartBar />
     </div>

@@ -1,46 +1,17 @@
-import React, { useState } from "react";
-import { Rnd } from "react-rnd";
-import { useWindowSize } from "usehooks-ts";
+import React from "react";
 import { cn } from "@/lib/utils";
 
 export interface WindowContainerProps
-  extends React.HTMLAttributes<HTMLDivElement> {
-  initialHeight?: number;
-  initialWidth?: number;
-}
+  extends React.HTMLAttributes<HTMLDivElement> {}
 
 const Container = React.forwardRef<HTMLDivElement, WindowContainerProps>(
-  ({ className, initialHeight = 300, initialWidth = 300, ...props }, ref) => {
-    const { width: windowWidth = 0, height: windowHeight = 0 } =
-      useWindowSize();
-    const initialX = Math.max((windowWidth - initialWidth) / 2, 0);
-    const initialY = Math.max((windowHeight - 48 - initialHeight) / 2, 0);
-
-    console.table({
-      windowWidth,
-      windowHeight,
-      initialWidth,
-      initialHeight,
-      initialX,
-      initialY,
-    });
-
-    const [state, setState] = useState({ x: initialX, y: initialY });
-
+  ({ className, ...props }, ref) => {
     return (
-      <Rnd
-        size={{ width: initialWidth, height: initialHeight }}
-        position={{ x: state.x, y: state.y }}
-        onDragStop={(_, data) => setState({ x: data.x, y: data.y })}
-        dragHandleClassName="title-bar"
-        bounds={"parent"}
-      >
-        <div
-          ref={ref}
-          className={cn("window h-full flex flex-col", className)}
-          {...props}
-        />
-      </Rnd>
+      <div
+        ref={ref}
+        className={cn("window h-full flex flex-col", className)}
+        {...props}
+      />
     );
   }
 );
