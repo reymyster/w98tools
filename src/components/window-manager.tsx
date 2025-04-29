@@ -1,11 +1,13 @@
 import { StartBar } from "./start-bar";
 import { Help as HelpWidget } from "@/components/widgets/help";
+import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { create } from "zustand";
 
 export const widgetRegistry = {
   Help: HelpWidget,
+  PrettifyJson: PrettifyJSONWidget,
   SearchReplace: SearchReplaceWidget,
   Welcome: WelcomeWidget,
 } as const;

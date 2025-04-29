@@ -79,7 +79,7 @@ export function StartBar() {
           <li
             className="cursor-pointer h-16 px-2 flex items-center hover:bg-[#0c1b98] hover:text-white shadow-[0_2px_#808280,_0_4px_white]"
             onClick={() => {
-              addWindow("Help");
+              addWindow("PrettifyJson");
               setMenuOpen(false);
             }}
           >
@@ -88,7 +88,7 @@ export function StartBar() {
                 className="mr-2 w-8"
                 src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAGFBMVEUAAACAAIAAAACAgICAgAD//wDAwMD///9lJw0+AAAAAXRSTlMAQObYZgAAAAFiS0dEBxZhiOsAAAAHdElNRQfiBhgXChR06RP7AAAAvUlEQVQoz3XRUQ6DIAyAYeYNKOwd8QTLEn1eMg+wxF7AB7zBvP7aUlBM5hufP5QEY/58N7iAs7ENHrYVZ20jHDQiwUk4mPF1CAV3RKwNB7i88UMAGnj6LRDKCE9GAKGOmOWMIZQ70JqmwBg08Ljw1CGFcknPaxgJIMoOXlPA8GSRkXZMKRpILHM+Ia1gYPtKIyeknrZsu0oOGLJoYKybsmhgul5Fg0M0qLKXoEoNihyByto8Jsk5ELm+dqfBDwcgN9nfkQsOAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDE4LTA2LTI0VDIzOjEwOjIwLTA0OjAw2N+qCAAAACV0RVh0ZGF0ZTptb2RpZnkAMjAxOC0wNi0yNFQyMzoxMDoyMC0wNDowMKmCErQAAAAASUVORK5CYII="
               />
-              Help
+              Prettify JSON
             </label>
           </li>
           <li
