@@ -1,5 +1,6 @@
 import { StartBar } from "./start-bar";
 import { Help as HelpWidget } from "@/components/widgets/help";
+import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
 import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
@@ -10,6 +11,7 @@ export const widgetRegistry = {
   PrettifyJson: PrettifyJSONWidget,
   SearchReplace: SearchReplaceWidget,
   Welcome: WelcomeWidget,
+  OCR: OCRWidget,
 } as const;
 
 export type WidgetType = keyof typeof widgetRegistry;

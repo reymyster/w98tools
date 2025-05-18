@@ -12,6 +12,11 @@ export function StartBar() {
     setMenuOpen(false);
   };
 
+  const openWindow = (...args: Parameters<typeof addWindow>) => {
+    addWindow(args[0]);
+    setMenuOpen(false);
+  };
+
   return (
     <aside
       id="start-bar"
@@ -33,10 +38,7 @@ export function StartBar() {
         <ul className="my-0">
           <li
             className="cursor-pointer h-16 px-2 flex items-center hover:bg-[#0c1b98] hover:text-white shadow-[0_2px_#808280,_0_4px_white]"
-            onClick={() => {
-              addWindow("Help");
-              setMenuOpen(false);
-            }}
+            onClick={() => openWindow("Help")}
           >
             <label className="!text-base !subpixel-antialiased !font-sans cursor-pointer">
               <img
@@ -48,10 +50,7 @@ export function StartBar() {
           </li>
           <li
             className="cursor-pointer h-16 px-2 flex items-center hover:bg-[#0c1b98] hover:text-white"
-            onClick={() => {
-              addWindow("SearchReplace");
-              setMenuOpen(false);
-            }}
+            onClick={() => openWindow("SearchReplace")}
           >
             <label className="!text-base !subpixel-antialiased !font-sans cursor-pointer">
               <img
@@ -72,16 +71,24 @@ export function StartBar() {
               />
               String Utilities
             </label>
-            <ul className="windows-box-shadow hidden group-hover:block absolute top-2 left-[calc(100%_-_6px)] bg-[silver] list-none m-0 p-0">
-              <li>Search &amp; Replace</li>
+            <ul className="windows-box-shadow hidden group-hover:block w-32 absolute top-2 left-[calc(100%_-_6px)] bg-[silver] list-none m-0 p-0">
+              <li
+                className="cursor-pointer h-8 px-2 flex items-center text-black hover:bg-[#0c1b98] hover:text-white group"
+                onClick={() => openWindow("OCR")}
+              >
+                Image OCR
+              </li>
+              <li
+                className="cursor-pointer h-8 px-2 flex items-center text-black hover:bg-[#0c1b98] hover:text-white group"
+                onClick={() => openWindow("SearchReplace")}
+              >
+                Search &amp; Replace
+              </li>
             </ul>
           </li>
           <li
             className="cursor-pointer h-16 px-2 flex items-center hover:bg-[#0c1b98] hover:text-white shadow-[0_2px_#808280,_0_4px_white]"
-            onClick={() => {
-              addWindow("PrettifyJson");
-              setMenuOpen(false);
-            }}
+            onClick={() => openWindow("PrettifyJson")}
           >
             <label className="!text-base !subpixel-antialiased !font-sans cursor-pointer">
               <img
