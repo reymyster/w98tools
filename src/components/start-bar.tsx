@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StartBarTime } from "./start-bar-time";
+import { StartBarWindowList } from "./start-bar-window-list";
 import { useWindowMangager } from "./window-manager";
 
 export function StartBar() {
@@ -22,7 +23,11 @@ export function StartBar() {
       id="start-bar"
       className="bg-[#c0c0c0] z-[999999999] shadow-[0_-2px_#fffdfc,_0_-4px_#cce9eb] p-2 items-center flex justify-between"
     >
-      <label id="start-button" htmlFor="start-button-input"></label>
+      <label
+        id="start-button"
+        htmlFor="start-button-input"
+        className="grow-0"
+      ></label>
       <input
         type="checkbox"
         id="start-button-input"
@@ -126,6 +131,7 @@ export function StartBar() {
           </li>
         </ul>
       </div>
+      <StartBarWindowList />
       <StartBarTime />
     </aside>
   );
