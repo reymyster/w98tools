@@ -80,33 +80,28 @@ export function ImageOCR({ id }: { id: number }) {
       <Widget.Title>Image OCR</Widget.Title>
       <Widget.Body className="flex flex-col gap-1 lg:gap-4 pb-2 lg:pb-4 overflow-auto">
         <div className="flex justify-between items-center">
+          <label
+            htmlFor="ocr-file-upload"
+            className="shadow-neumorphic active:shadow-neumorphic-active cursor-pointer h-4 px-2 mx-1"
+          >
+            Choose File
+          </label>
           <input
             type="file"
+            id="ocr-file-upload"
             accept="image/*"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
+            className="hidden"
           />
           <button onClick={handleClipboard}>Paste Image from Clipboard</button>
         </div>
         {imageUrl && (
-          <div className="m-1 max-h-36 overflow-y-auto">
+          <div className="m-1 max-h-48 overflow-y-auto">
             <img
               src={imageUrl}
               alt="Uploaded"
               className="max-w-full border border-gray-600"
             />
-          </div>
-        )}
-        {imageFile && (
-          <div>
-            {/* <label>Progress:</label>
-            <progress value={progress} max={1} className="w-full" /> */}
-            <div className="progress-indicator segmented">
-              <span
-                className="progress-indicator-bar"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
-            <p>{Math.round(progress * 100)}%</p>
           </div>
         )}
         {ocrText && (
@@ -121,6 +116,16 @@ export function ImageOCR({ id }: { id: number }) {
           </div>
         )}
       </Widget.Body>
+      {imageFile && (
+        <Widget.Status>
+          <div className="progress-indicator segmented">
+            <span
+              className="progress-indicator-bar"
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
+        </Widget.Status>
+      )}
     </Widget>
   );
 }
