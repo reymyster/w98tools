@@ -1,6 +1,21 @@
 import React, { useState, type ReactNode } from "react";
 import { Rnd } from "react-rnd";
 import { useWindowSize } from "usehooks-ts";
+import {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Window, type WindowContainerProps } from "@/components/window";
 import { useWindowMangager } from "@/components/window-manager";
 
@@ -91,6 +106,33 @@ export function Widget({
 
   const close = () => removeWindow(windowID);
 
+  const moveAndResize = (
+    to:
+      | "LeftHalf"
+      | "RightHalf"
+      | "TopLeft"
+      | "TopRight"
+      | "BottomLeft"
+      | "BottomRight"
+  ) => {
+    setState((prev) => ({
+      ...prev,
+      isMaximized: false,
+      isMinimized: false,
+      y:
+        to.includes("Half") || to.includes("Top")
+          ? 0
+          : Math.round(bounds.height / 2) - 7,
+      x: to.includes("Left") ? 0 : Math.round(bounds.width / 2) - 7,
+      height: to.includes("Half")
+        ? bounds.height - 15
+        : Math.round(bounds.height / 2) - 15,
+      width: Math.round(bounds.width / 2) - 15,
+      prevX: 0,
+      prevY: 0,
+    }));
+  };
+
   return (
     <Rnd
       size={{ width: widgetWidth, height: widgetHeight }}
@@ -116,30 +158,65 @@ export function Widget({
       enableResizing={!state.isMaximized && !state.isMinimized}
     >
       <Window.Container {...props}>
-        <Window.TitleBar>
-          {title}
-          <Window.TitleBarControls>
-            {!state.isMinimized && !state.isMaximized && (
-              <Window.TitleBarControlButton
-                buttonType="Minimize"
-                onClick={minimize}
-              />
-            )}
-            {(state.isMinimized || state.isMaximized) && (
-              <Window.TitleBarControlButton
-                buttonType="Restore"
-                onClick={restore}
-              />
-            )}
-            {!state.isMinimized && !state.isMaximized && (
-              <Window.TitleBarControlButton
-                buttonType="Maximize"
-                onClick={maximize}
-              />
-            )}
-            <Window.TitleBarControlButton buttonType="Close" onClick={close} />
-          </Window.TitleBarControls>
-        </Window.TitleBar>
+        <ContextMenu>
+          <ContextMenuTrigger>
+            <Window.TitleBar>
+              {title}
+              <Window.TitleBarControls>
+                {!state.isMinimized && !state.isMaximized && (
+                  <Window.TitleBarControlButton
+                    buttonType="Minimize"
+                    onClick={minimize}
+                  />
+                )}
+                {(state.isMinimized || state.isMaximized) && (
+                  <Window.TitleBarControlButton
+                    buttonType="Restore"
+                    onClick={restore}
+                  />
+                )}
+                {!state.isMinimized && !state.isMaximized && (
+                  <Window.TitleBarControlButton
+                    buttonType="Maximize"
+                    onClick={maximize}
+                  />
+                )}
+                <Window.TitleBarControlButton
+                  buttonType="Close"
+                  onClick={close}
+                />
+              </Window.TitleBarControls>
+            </Window.TitleBar>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                Move &amp; Resize
+                <ContextMenuSubContent>
+                  <ContextMenuItem onClick={() => moveAndResize("LeftHalf")}>
+                    Left Half
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => moveAndResize("RightHalf")}>
+                    Right Half
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => moveAndResize("TopLeft")}>
+                    Top Left
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => moveAndResize("TopRight")}>
+                    Top Right
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => moveAndResize("BottomLeft")}>
+                    Bottom Left
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => moveAndResize("BottomRight")}>
+                    Bottom Right
+                  </ContextMenuItem>
+                </ContextMenuSubContent>
+              </ContextMenuSubTrigger>
+            </ContextMenuSub>
+          </ContextMenuContent>
+        </ContextMenu>
         {!state.isMinimized && body}
         {!state.isMinimized && statuses.length > 0 && (
           <Window.StatusBar>
