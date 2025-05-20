@@ -106,17 +106,17 @@ export function ImageOCR({ id }: { id: number }) {
         )}
         {ocrText && (
           <div className="mt-2">
-            <h3>Extracted Text</h3>
+            <h3 className="font-mono !text-lg">Extracted Text</h3>
             <textarea
               value={ocrText}
               readOnly
               rows={10}
-              className="w-full p-2"
+              className="w-full p-2 !font-mono"
             />
           </div>
         )}
       </Widget.Body>
-      {imageFile && (
+      {imageFile && progress < 1 && (
         <Widget.Status>
           <div className="progress-indicator segmented">
             <span
