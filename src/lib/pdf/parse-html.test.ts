@@ -147,6 +147,52 @@ describe("parseHtml", () => {
     ]);
   });
 
+  it("treats a <del> wrapping block content as a block container", () => {
+    // Regression: <del> is a transparent inline element just like <a>, and
+    // routinely wraps whole paragraphs in revision-tracking HTML exports.
+    // Before the fix, only <a> got this treatment, so the boundary between
+    // the two <p>s was silently lost.
+    const nodes = parseHtml("<del><p>one</p><p>two</p></del>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "one" }] },
+      { kind: "paragraph", runs: [{ text: "two" }] },
+    ]);
+  });
+
+  it("treats an <ins> wrapping block content as a block container", () => {
+    const nodes = parseHtml("<ins><p>one</p><p>two</p></ins>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "one" }] },
+      { kind: "paragraph", runs: [{ text: "two" }] },
+    ]);
+  });
+
+  it("treats a <span> wrapping block content as a block container", () => {
+    const nodes = parseHtml("<span><p>one</p><p>two</p></span>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "one" }] },
+      { kind: "paragraph", runs: [{ text: "two" }] },
+    ]);
+  });
+
+  it("keeps a boundary between a <del> wrapping a block and trailing text", () => {
+    const nodes = parseHtml("<del><p>x</p></del> trailing text.");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "x" }] },
+      { kind: "paragraph", runs: [{ text: " trailing text." }] },
+    ]);
+  });
+
+  it("keeps a <span> containing only inline content inline", () => {
+    // Guards against the fix over-triggering: a <span> that does not
+    // contain any block-level descendant must still buffer as inline runs
+    // rather than being treated as a block container.
+    const nodes = parseHtml("<span>a</span><span>b</span>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "a" }, { text: "b" }] },
+    ]);
+  });
+
   it("keeps a bare inline anchor's link when it wraps only inline content", () => {
     const nodes = parseHtml('<a href="https://e.com">bare link</a>');
     expect(nodes).toEqual([

@@ -147,13 +147,15 @@ function runsFrom(node: Node, inherited: Partial<InlineRun> = {}): InlineRun[] {
 /**
  * True if `el` contains, anywhere in its descendants, a recognized
  * block-level element (`BLOCK_TAGS`). Used to decide whether an element that
- * is inline by default -- an `<a>`, or an unrecognized tag such as a custom
- * element or `<svg>` -- should instead be treated as a transparent block
- * container: HTML5 permits an anchor to wrap block content (e.g.
- * `<a href="x"><p>one</p><p>two</p></a>`), and if we buffered that as a
- * single inline run the paragraph boundary between "one" and "two" would be
- * lost. The same logic keeps an unknown wrapper that genuinely contains a
- * `<p>` from swallowing it into an inline run.
+ * is inline by default -- any `INLINE_TAGS` member (`<a>`, `<del>`, `<ins>`,
+ * `<span>`, ...), or an unrecognized tag such as a custom element or `<svg>`
+ * -- should instead be treated as a transparent block container: HTML5
+ * permits several inline elements to wrap block content (e.g.
+ * `<a href="x"><p>one</p><p>two</p></a>`, or `<del><p>one</p><p>two</p></del>`
+ * from revision-tracking markup), and if we buffered that as a single inline
+ * run the paragraph boundary between "one" and "two" would be lost. The same
+ * logic keeps an unknown wrapper that genuinely contains a `<p>` from
+ * swallowing it into an inline run.
  *
  * Delegates to the native `querySelector` rather than a hand-rolled
  * recursive walk: a single native call against the comma-joined
@@ -189,10 +191,10 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  * and recursing into list items / block quotes / transparent containers.
  *
  * `inheritedLink` carries an ancestor `<a>`'s href down through a block
- * container recursion -- see the `A` branch below -- so that every run
- * produced from inside an anchor wrapping block content still carries the
- * link, even though the anchor itself is being treated as transparent
- * rather than as an inline mark.
+ * container recursion -- see the transparent-container branch below -- so
+ * that every run produced from inside an anchor wrapping block content
+ * still carries the link, even though the anchor itself is being treated
+ * as transparent rather than as an inline mark.
  *
  * Content that is *not* itself a recognized block (bare text, or a genuine
  * inline element such as `<strong>`/`<a>`/`<img>` sitting directly under
@@ -223,7 +225,17 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  * outside that list, including a custom element or `<svg>` (see
  * `parse-html.test.ts` for both regressions):
  *
- * - Known inline tags (`INLINE_TAGS`) never get a boundary.
+ * - Known inline tags (`INLINE_TAGS`) never get a boundary *unless* they
+ *   contain a known block-level descendant (`containsBlockLevelContent`),
+ *   in which case they're treated as a transparent block container instead
+ *   and recursed into as blocks. HTML5's transparent content model permits
+ *   several inline tags -- `<a>`, `<del>`, `<ins>`, `<span>`, `<label>`, ...
+ *   -- to wrap whole paragraphs (revision-tracking and suggested-edit HTML
+ *   commonly wraps a `<p>` in `<del>`/`<ins>`), and without this check the
+ *   boundary between e.g. `<del><p>one</p><p>two</p></del>`'s two `<p>`s
+ *   would be silently lost to the run buffer. A plain inline tag with no
+ *   block-level descendant -- the common case, e.g. `<strong>bold</strong>`
+ *   -- still just buffers via `runsFrom` as before.
  * - Known block tags (`BLOCK_TAGS`) -- `<figcaption>`, `<dt>`/`<dd>`,
  *   `<div>`, etc. -- always get one. That is what keeps
  *   `<figure><img alt="a photo"><figcaption>Caption text</figcaption></figure>`
@@ -233,10 +245,9 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  * - Anything else -- a custom element, `<svg>`, a future HTML addition --
  *   defaults to inline (so `<custom-tag>` or an inline `<svg>` mid-sentence
  *   doesn't split it into three paragraphs), *unless* it contains a known
- *   block-level descendant (`containsBlockLevelContent`), in which case it's
- *   treated as a transparent block container instead -- the same rule
- *   already used for an `<a>` wrapping block content, generalized to any
- *   unrecognized wrapper.
+ *   block-level descendant, in which case it's treated as a transparent
+ *   block container too -- the same check as above, applied to unrecognized
+ *   wrappers instead of known inline tags.
  */
 function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
   const nodes: DocNode[] = [];
@@ -305,15 +316,25 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
     } else if (tag === "TABLE") {
       flush();
       nodes.push(...tableRowsAsParagraphs(element));
-    } else if (tag === "A" && containsBlockLevelContent(element)) {
-      // <a> is inline by default, but HTML5 permits it to wrap block
-      // content (e.g. `<a href="x"><p>one</p><p>two</p></a>`). Treat it as
-      // a transparent block container in that case -- recursing into its
-      // children as blocks -- while threading its href down so every run
-      // produced inside still carries the link.
+    } else if (INLINE_TAGS.has(tag) && containsBlockLevelContent(element)) {
+      // Every INLINE_TAGS member is inline by default, but HTML5 permits
+      // several of them -- <a>, <del>, <ins>, <span>, <label>, ... -- to
+      // wrap block content (e.g. `<a href="x"><p>one</p><p>two</p></a>`, or
+      // `<del><p>one</p><p>two</p></del>` from revision-tracking markup).
+      // Treat any such element as a transparent block container in that
+      // case -- recursing into its children as blocks -- rather than only
+      // special-casing <a>. Link semantics are anchor-specific, so only an
+      // <a> threads its href down so every run produced inside still
+      // carries the link; every other inline tag just recurses with the
+      // link it already inherited.
       flush();
       nodes.push(
-        ...blocksFrom(element, element.getAttribute("href") ?? inheritedLink),
+        ...blocksFrom(
+          element,
+          tag === "A"
+            ? (element.getAttribute("href") ?? inheritedLink)
+            : inheritedLink,
+        ),
       );
     } else if (INLINE_TAGS.has(tag)) {
       // Genuine inline formatting sitting directly among block-level
