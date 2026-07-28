@@ -56,11 +56,20 @@ const TitleBarControlButton = React.forwardRef<
 ));
 TitleBarControlButton.displayName = "WindowTitleBarControlButton";
 
+// min-h-0 is load-bearing: a flex child defaults to min-height:auto, which
+// refuses to shrink below its content. Without it, a body taller than the
+// window pushes the status bar out through the bottom of the frame instead of
+// scrolling — which is exactly what happened when the Welcome window's tool
+// list grew. overflow-auto then gives the overflow somewhere to go.
 const Body = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("window-body grow", className)} {...props} />
+  <div
+    ref={ref}
+    className={cn("window-body grow min-h-0 overflow-auto", className)}
+    {...props}
+  />
 ));
 Body.displayName = "WindowBody";
 
