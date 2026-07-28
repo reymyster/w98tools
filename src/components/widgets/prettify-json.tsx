@@ -17,7 +17,7 @@ export function PrettifyJson({ id }: { id: number }) {
       const parsed = JSON.parse(txtSource);
       setOutput(JSON.stringify(parsed, null, 5));
       setValid(true);
-    } catch (err) {
+    } catch {
       setValid(false);
     }
   }, [txtSource, setOutput, setValid]);

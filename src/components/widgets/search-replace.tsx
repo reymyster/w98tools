@@ -5,18 +5,13 @@ export function SearchReplace({ id }: { id: number }) {
   const [txtSource, setSource] = useState("");
   const [txtFind, setFind] = useState("");
   const [txtReplace, setReplace] = useState("");
-  let txtOutput: string = "";
-
   const getFormattedLength = useCallback(
     (s: string) => new Intl.NumberFormat().format(s.length),
     []
   );
 
-  if (txtFind.length === 0) {
-    txtOutput = txtSource;
-  } else {
-    txtOutput = txtSource.replaceAll(txtFind, txtReplace);
-  }
+  const txtOutput =
+    txtFind.length === 0 ? txtSource : txtSource.replaceAll(txtFind, txtReplace);
 
   return (
     <Widget windowID={id} initialHeight={500} initialWidth={400}>
