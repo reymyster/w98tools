@@ -11,6 +11,7 @@ Live at [w98tools.vercel.app](https://w98tools.vercel.app).
 - **Search & Replace** — literal (non-regex) find and replace, with character counts
 - **Prettify JSON** — format JSON, with inline validation
 - **Image OCR** — extract text from an uploaded or pasted image, via tesseract.js
+- **PDF Exporter** — turn text, Markdown or HTML into a PDF sized for a reMarkable
 
 Planned: Split, Prettify SQL.
 

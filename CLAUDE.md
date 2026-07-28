@@ -66,6 +66,16 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   there and one `no-create-object-url-without-revoke` in `image-ocr.tsx` that
   it can't trace through a ref. Both are known and expected — 8 findings is the
   clean baseline.
+- **pdfmake uses only standard-14 fonts.** `src/lib/pdf/generate.ts` dynamically
+  imports `pdfmake/build/standard-fonts/Times.js` (body text) and
+  `pdfmake/build/standard-fonts/Courier.js` (code blocks) — 49.15 kB and
+  11.86 kB gzipped. The alternative, `build/vfs_fonts.js`, embeds Roboto at
+  458 kB gzipped — roughly 7x the two files combined. pdfmake itself is also a
+  dynamic import so it stays out of the main bundle; check `dist/assets/` to
+  verify after any changes. A lesson learned: Courier was referenced by the
+  style layer but forgot to register, so every document with code crashed PDF
+  generation until caught in review. If another font name is introduced in
+  `doc-def.ts`, it must be registered in `generate.ts` too.
 
 ## Dev server
 
