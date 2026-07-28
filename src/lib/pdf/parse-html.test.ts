@@ -180,4 +180,63 @@ describe("parseHtml", () => {
   it("returns no nodes for comment-only content", () => {
     expect(parseHtml("<div><!-- comment only --></div>")).toEqual([]);
   });
+
+  it("keeps an unrecognized custom element inline mid-sentence", () => {
+    // Regression: a tag that is neither a known inline tag nor a known
+    // block tag (a custom element, here) must not force a paragraph
+    // boundary on its own -- only a recognized block tag, or an unknown
+    // wrapper that itself contains one, should do that.
+    const nodes = parseHtml("Hello <custom-tag>world</custom-tag> today.");
+    expect(nodes).toHaveLength(1);
+    const runs = nodes[0].kind === "paragraph" ? nodes[0].runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("Hello world today.");
+  });
+
+  it("keeps an inline <svg> mid-sentence from splitting the paragraph", () => {
+    const nodes = parseHtml(
+      'before <svg viewBox="0 0 10 10"><circle r="5"/></svg> after',
+    );
+    expect(nodes).toHaveLength(1);
+    const runs = nodes[0].kind === "paragraph" ? nodes[0].runs : [];
+    const text = runs.map((r) => r.text).join("");
+    expect(text).toContain("before");
+    expect(text).toContain("after");
+  });
+
+  it("treats <button> as inline formatting mid-sentence", () => {
+    // button/video/audio/picture/select/... aren't in BLOCK_TAGS or
+    // INLINE_TAGS; they must default to inline like any other unrecognized
+    // element without block-level descendants.
+    const nodes = parseHtml("Click <button>here</button> to continue.");
+    expect(nodes).toHaveLength(1);
+    const runs = nodes[0].kind === "paragraph" ? nodes[0].runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("Click here to continue.");
+  });
+
+  it("treats an unrecognized wrapper as a block boundary when it contains a real block element", () => {
+    // The inline default for unknown elements is overridden the moment the
+    // wrapper genuinely contains a recognized block-level descendant.
+    const nodes = parseHtml("<random-widget><p>inside</p></random-widget>");
+    expect(nodes).toEqual([{ kind: "paragraph", runs: [{ text: "inside" }] }]);
+  });
+
+  it("keeps containsBlockLevelContent fast on deeply nested anchors", () => {
+    // Regression for the manual recursive walk that used to back
+    // containsBlockLevelContent: a 200-deep <div><a><span>...</span></a>
+    // </div> chain used to take ~1.7s because the walk was re-entered for
+    // every ancestor <a>. The querySelector-based implementation should
+    // make this effectively instant.
+    const depth = 200;
+    let html = "";
+    for (let i = 0; i < depth; i++) html += "<div><a><span>";
+    html += "leaf text";
+    for (let i = 0; i < depth; i++) html += "</span></a></div>";
+
+    const start = performance.now();
+    const nodes = parseHtml(html);
+    const elapsed = performance.now() - start;
+
+    expect(nodes.length).toBeGreaterThan(0);
+    expect(elapsed).toBeLessThan(500);
+  });
 });

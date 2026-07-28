@@ -7,11 +7,7 @@ const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "HEAD"]);
 
 // Genuine inline-level elements: they may carry formatting (or, for
 // `<img>`/`<br>`, contribute a single run) but never introduce a paragraph
-// break on their own. `blocksFrom` treats everything NOT in this set as a
-// block boundary -- deliberately inverted from enumerating block tags, so
-// that any element we haven't specifically thought about (a new block tag,
-// a typo, a future HTML addition) degrades safely by getting a boundary
-// instead of silently gluing its text to a neighbour's.
+// break on their own.
 const INLINE_TAGS = new Set([
   "A",
   "SPAN",
@@ -46,6 +42,58 @@ const INLINE_TAGS = new Set([
   "TT",
   "FONT",
 ]);
+
+// Genuine block-level elements: `blocksFrom` always gives these a paragraph
+// boundary. Enumerated generously and explicitly (rather than inferred from
+// "not inline") so that a wrapper we've never heard of -- a custom element,
+// `<svg>`, a future HTML addition -- doesn't get lumped in with them; see
+// the three-way decision in `blocksFrom`'s doc comment below.
+const BLOCK_TAGS = new Set([
+  "P",
+  "DIV",
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "UL",
+  "OL",
+  "LI",
+  "TABLE",
+  "THEAD",
+  "TBODY",
+  "TFOOT",
+  "TR",
+  "TD",
+  "TH",
+  "BLOCKQUOTE",
+  "PRE",
+  "SECTION",
+  "ARTICLE",
+  "ASIDE",
+  "HEADER",
+  "FOOTER",
+  "NAV",
+  "MAIN",
+  "FIGURE",
+  "FIGCAPTION",
+  "DL",
+  "DT",
+  "DD",
+  "FORM",
+  "FIELDSET",
+  "ADDRESS",
+  "HR",
+  "DETAILS",
+  "SUMMARY",
+]);
+
+// A CSS selector equivalent to BLOCK_TAGS, built once, for use with the
+// native `querySelector` in `containsBlockLevelContent` below.
+const BLOCK_SELECTOR = [...BLOCK_TAGS]
+  .map((tag) => tag.toLowerCase())
+  .join(",");
 
 const HEADING_TAG_RE = /^H[1-6]$/;
 
@@ -97,22 +145,25 @@ function runsFrom(node: Node, inherited: Partial<InlineRun> = {}): InlineRun[] {
 }
 
 /**
- * True if `el` contains, directly or through further descendants, any
- * element that `blocksFrom` would treat as a block boundary (i.e. anything
- * not in `INLINE_TAGS`). Used to decide whether an `<a>` -- inline by
- * default -- should instead be treated as a transparent block container:
- * HTML5 permits an anchor to wrap block content (e.g.
+ * True if `el` contains, anywhere in its descendants, a recognized
+ * block-level element (`BLOCK_TAGS`). Used to decide whether an element that
+ * is inline by default -- an `<a>`, or an unrecognized tag such as a custom
+ * element or `<svg>` -- should instead be treated as a transparent block
+ * container: HTML5 permits an anchor to wrap block content (e.g.
  * `<a href="x"><p>one</p><p>two</p></a>`), and if we buffered that as a
  * single inline run the paragraph boundary between "one" and "two" would be
- * lost.
+ * lost. The same logic keeps an unknown wrapper that genuinely contains a
+ * `<p>` from swallowing it into an inline run.
+ *
+ * Delegates to the native `querySelector` rather than a hand-rolled
+ * recursive walk: a single native call against the comma-joined
+ * `BLOCK_SELECTOR` is both simpler and, unlike a manual per-child recursion
+ * re-entered from every ancestor `<a>`, doesn't degrade badly on deeply
+ * nested markup (a 200-level-deep nested-anchor fixture took ~1.7s with the
+ * manual walk; this is effectively instant).
  */
 function containsBlockLevelContent(el: Element): boolean {
-  for (const child of [...el.children]) {
-    if (SKIP_TAGS.has(child.tagName)) continue;
-    if (!INLINE_TAGS.has(child.tagName)) return true;
-    if (containsBlockLevelContent(child)) return true;
-  }
-  return false;
+  return el.querySelector(BLOCK_SELECTOR) !== null;
 }
 
 /**
@@ -164,16 +215,28 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  * recognized blocks, so each flushes the (empty) buffer, then pushes its own
  * paragraph independently.
  *
- * Which elements count as "inline" (buffered) vs. "block" (a boundary) is
- * inverted from a naive approach: rather than enumerating known block tags
- * and treating everything else as inline, `INLINE_TAGS` enumerates known
- * inline tags and everything else -- including tags we've never heard of,
- * like `<figcaption>`, `<dt>`/`<dd>`, or a future HTML addition -- falls
- * through to the final `else` and gets a boundary. That is what keeps
- * `<figure><img alt="a photo"><figcaption>Caption text</figcaption></figure>`
- * from gluing into "a photoCaption text": `<figcaption>` isn't inline, so it
- * flushes the image's alt text into its own paragraph before recursing into
- * the caption for a second one.
+ * Which elements count as "inline" (buffered) vs. "block" (a boundary) is a
+ * three-way decision, not a binary one -- enumerating only known inline tags
+ * (defaulting everything else to block) glues `<figcaption>`/`<dt>`/`<dd>`
+ * text to their neighbours; enumerating only known block tags (defaulting
+ * everything else to inline) forces a boundary mid-sentence for any tag
+ * outside that list, including a custom element or `<svg>` (see
+ * `parse-html.test.ts` for both regressions):
+ *
+ * - Known inline tags (`INLINE_TAGS`) never get a boundary.
+ * - Known block tags (`BLOCK_TAGS`) -- `<figcaption>`, `<dt>`/`<dd>`,
+ *   `<div>`, etc. -- always get one. That is what keeps
+ *   `<figure><img alt="a photo"><figcaption>Caption text</figcaption></figure>`
+ *   from gluing into "a photoCaption text": `<figcaption>` is a known block
+ *   tag, so it flushes the image's alt text into its own paragraph before
+ *   recursing into the caption for a second one.
+ * - Anything else -- a custom element, `<svg>`, a future HTML addition --
+ *   defaults to inline (so `<custom-tag>` or an inline `<svg>` mid-sentence
+ *   doesn't split it into three paragraphs), *unless* it contains a known
+ *   block-level descendant (`containsBlockLevelContent`), in which case it's
+ *   treated as a transparent block container instead -- the same rule
+ *   already used for an `<a>` wrapping block content, generalized to any
+ *   unrecognized wrapper.
  */
 function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
   const nodes: DocNode[] = [];
@@ -257,13 +320,18 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
       // content: buffer its runs rather than recursing, so marks and alt
       // text survive even without a wrapping <p>.
       runBuffer.push(...runsFrom(element, { link: inheritedLink }));
+    } else if (!BLOCK_TAGS.has(tag) && !containsBlockLevelContent(element)) {
+      // An element that is neither a known inline tag nor a known block
+      // tag -- a custom element, `<svg>`, a future HTML addition -- and
+      // that doesn't itself wrap any known block-level content: default to
+      // inline, the same way a bare `<a>` does, so it doesn't force a
+      // boundary mid-sentence (e.g. `Hello <custom-tag>world</custom-tag>
+      // today.` stays one paragraph).
+      runBuffer.push(...runsFrom(element, { link: inheritedLink }));
     } else {
-      // Anything else -- a block container we recognize (div/section/
-      // figure/...), or an element we don't specifically recognize at all
-      // -- is treated as a block boundary: flush the inline buffer, then
-      // recurse into its children as blocks. This is what makes an unknown
-      // or newly-encountered element degrade safely instead of silently
-      // gluing to its neighbour.
+      // A known block tag (div/section/figure/dl/dt/dd/...), or an unknown
+      // wrapper that genuinely contains block-level content: flush the
+      // inline buffer, then recurse into its children as blocks.
       flush();
       nodes.push(...blocksFrom(element, inheritedLink));
     }
