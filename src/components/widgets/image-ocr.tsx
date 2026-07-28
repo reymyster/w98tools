@@ -11,7 +11,7 @@ export function ImageOCR({ id }: { id: number }) {
   // handle file uploads
   const handleFiles = (files: FileList) => {
     const file = files[0];
-    if (file && file.type.startsWith("image/")) {
+    if (file?.type.startsWith("image/")) {
       setImageFile(file);
       const url = URL.createObjectURL(file);
       setImageUrl(url);
@@ -90,7 +90,9 @@ export function ImageOCR({ id }: { id: number }) {
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
             className="hidden"
           />
-          <button onClick={handleClipboard}>Paste Image from Clipboard</button>
+          <button type="button" onClick={handleClipboard}>
+            Paste Image from Clipboard
+          </button>
         </div>
         {imageUrl && (
           <div className="m-1 max-h-48 overflow-y-auto">

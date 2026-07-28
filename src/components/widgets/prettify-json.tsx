@@ -43,12 +43,11 @@ export function PrettifyJson({ id }: { id: number }) {
         </div>
       </Widget.Body>
       <Widget.Status>
-        <span
-          dangerouslySetInnerHTML={{
-            __html: valid ? "&nbsp;" : "Invalid JSON.",
-          }}
-          className="text-red-500"
-        ></span>
+        {/* U+00A0 is a non-breaking space, holding the row's height when
+            there's nothing to report. */}
+        <span className="text-red-500">
+          {valid ? "\u00A0" : "Invalid JSON."}
+        </span>
       </Widget.Status>
     </Widget>
   );

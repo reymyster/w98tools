@@ -215,8 +215,10 @@ export function Widget({
         {!state.isMinimized && body}
         {!state.isMinimized && statuses.length > 0 && (
           <Window.StatusBar>
-            {statuses.map((status, statusIndex) => (
-              <Window.StatusBarField key={statusIndex}>
+            {/* React.Children.toArray assigns each child a stable, unique
+                key, so there's no need to fall back to the array index. */}
+            {statuses.map((status) => (
+              <Window.StatusBarField key={status.key}>
                 {status}
               </Window.StatusBarField>
             ))}
