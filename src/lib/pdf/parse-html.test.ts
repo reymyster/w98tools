@@ -266,6 +266,43 @@ describe("parseHtml", () => {
     expect(nodes).toEqual([{ kind: "paragraph", runs: [{ text: "inside" }] }]);
   });
 
+  it("treats a <strong> wrapping block content as a block container and preserves bold on both", () => {
+    // Regression: before the fix, blocksFrom's block-container recursion
+    // only threaded an inherited link down, so wrapping mark-bearing tags
+    // like <strong> lost their mark entirely when they wrapped <p>s.
+    const nodes = parseHtml("<strong><p>one</p><p>two</p></strong>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "one", bold: true }] },
+      { kind: "paragraph", runs: [{ text: "two", bold: true }] },
+    ]);
+  });
+
+  it("treats an <em> wrapping a block as a block container and preserves italic", () => {
+    const nodes = parseHtml("<em><p>one</p></em>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "one", italic: true }] },
+    ]);
+  });
+
+  it("accumulates both marks for nested mark-bearing wrappers around a block", () => {
+    const nodes = parseHtml("<strong><em><p>x</p></em></strong>");
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "x", bold: true, italic: true }] },
+    ]);
+  });
+
+  it("keeps both bold and link when a <strong> wraps an <a> wrapping a block", () => {
+    const nodes = parseHtml(
+      '<strong><a href="https://e.com"><p>one</p></a></strong>',
+    );
+    expect(nodes).toEqual([
+      {
+        kind: "paragraph",
+        runs: [{ text: "one", bold: true, link: "https://e.com" }],
+      },
+    ]);
+  });
+
   it("keeps containsBlockLevelContent fast on deeply nested anchors", () => {
     // Regression for the manual recursive walk that used to back
     // containsBlockLevelContent: a 200-deep <div><a><span>...</span></a>

@@ -98,6 +98,43 @@ const BLOCK_SELECTOR = [...BLOCK_TAGS]
 const HEADING_TAG_RE = /^H[1-6]$/;
 
 /**
+ * Given a mark-bearing element and the marks already inherited from its
+ * ancestors, returns the marks with this element's own contribution folded
+ * in: `bold` for `<strong>`/`<b>`, `italic` for `<em>`/`<i>`, `code` for
+ * `<code>`/`<kbd>`, `link` for `<a>` (its `href`). An element with no mark of
+ * its own -- `<span>`, `<del>`, `<ins>`, ... -- returns `inherited`
+ * unchanged. Marks nest: since each case spreads `inherited` before adding
+ * its own field, `<strong><em>x</em></strong>` accumulates both `bold` and
+ * `italic` rather than one clobbering the other.
+ *
+ * Shared by `runsFrom` (applied on the way down while producing runs) and by
+ * `blocksFrom`'s block-container recursion (applied once per transparent
+ * wrapper, without producing any runs itself, since the wrapper's children
+ * are recursed into as blocks instead) -- so both call sites agree on which
+ * tags carry which mark, rather than duplicating the tag-to-mark mapping.
+ */
+function addMark(
+  el: Element,
+  inherited: Partial<InlineRun>,
+): Partial<InlineRun> {
+  switch (el.tagName) {
+    case "STRONG":
+    case "B":
+      return { ...inherited, bold: true };
+    case "EM":
+    case "I":
+      return { ...inherited, italic: true };
+    case "CODE":
+    case "KBD":
+      return { ...inherited, code: true };
+    case "A":
+      return { ...inherited, link: el.getAttribute("href") ?? undefined };
+    default:
+      return inherited;
+  }
+}
+
+/**
  * Collapses a text node's whitespace to single spaces (matching how a
  * browser renders runs of whitespace) and drops nodes that are pure
  * whitespace. Never applied to `<pre>` content -- see the `PRE` branch in
@@ -115,31 +152,14 @@ function runsFrom(node: Node, inherited: Partial<InlineRun> = {}): InlineRun[] {
   const el = node as Element;
   if (SKIP_TAGS.has(el.tagName)) return [];
 
-  let next = inherited;
-  switch (el.tagName) {
-    case "STRONG":
-    case "B":
-      next = { ...inherited, bold: true };
-      break;
-    case "EM":
-    case "I":
-      next = { ...inherited, italic: true };
-      break;
-    case "CODE":
-    case "KBD":
-      next = { ...inherited, code: true };
-      break;
-    case "A":
-      next = { ...inherited, link: el.getAttribute("href") ?? undefined };
-      break;
-    case "BR":
-      return [{ ...inherited, text: "\n" }];
-    case "IMG": {
-      // Images are out of scope; alt text carries the meaning (see plan).
-      const alt = el.getAttribute("alt") ?? "";
-      return alt === "" ? [] : [{ ...inherited, text: alt }];
-    }
+  if (el.tagName === "BR") return [{ ...inherited, text: "\n" }];
+  if (el.tagName === "IMG") {
+    // Images are out of scope; alt text carries the meaning (see plan).
+    const alt = el.getAttribute("alt") ?? "";
+    return alt === "" ? [] : [{ ...inherited, text: alt }];
   }
+
+  const next = addMark(el, inherited);
 
   return [...el.childNodes].flatMap((child) => runsFrom(child, next));
 }
@@ -190,11 +210,14 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  * Walks the block-level children of `el`, producing one `DocNode` per block
  * and recursing into list items / block quotes / transparent containers.
  *
- * `inheritedLink` carries an ancestor `<a>`'s href down through a block
- * container recursion -- see the transparent-container branch below -- so
- * that every run produced from inside an anchor wrapping block content
- * still carries the link, even though the anchor itself is being treated
- * as transparent rather than as an inline mark.
+ * `inherited` carries the accumulated marks of any mark-bearing ancestor
+ * (`<strong>`, `<em>`, `<code>`, `<a>`, ...) down through a block container
+ * recursion -- see the transparent-container branch below -- so that every
+ * run produced from inside e.g. `<strong><p>one</p></strong>` still carries
+ * `bold: true`, even though `<strong>` itself is being treated as
+ * transparent rather than as an inline mark. Marks accumulate via the same
+ * `addMark` helper `runsFrom` uses, so `<strong><a href="x"><p>one</p></a>
+ * </strong>` carries both `bold` and `link` on its run.
  *
  * Content that is *not* itself a recognized block (bare text, or a genuine
  * inline element such as `<strong>`/`<a>`/`<img>` sitting directly under
@@ -235,7 +258,10 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  *   boundary between e.g. `<del><p>one</p><p>two</p></del>`'s two `<p>`s
  *   would be silently lost to the run buffer. A plain inline tag with no
  *   block-level descendant -- the common case, e.g. `<strong>bold</strong>`
- *   -- still just buffers via `runsFrom` as before.
+ *   -- still just buffers via `runsFrom` as before. When the wrapper does
+ *   carry a mark of its own -- `<strong>`, `<em>`, `<code>`, `<a>` -- that
+ *   mark is folded into `inherited` (via `addMark`) before recursing, so it
+ *   isn't lost just because the wrapper is being treated as transparent.
  * - Known block tags (`BLOCK_TAGS`) -- `<figcaption>`, `<dt>`/`<dd>`,
  *   `<div>`, etc. -- always get one. That is what keeps
  *   `<figure><img alt="a photo"><figcaption>Caption text</figcaption></figure>`
@@ -249,7 +275,10 @@ function tableRowsAsParagraphs(table: Element): DocNode[] {
  *   block container too -- the same check as above, applied to unrecognized
  *   wrappers instead of known inline tags.
  */
-function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
+function blocksFrom(
+  el: Element,
+  inherited: Partial<InlineRun> = {},
+): DocNode[] {
   const nodes: DocNode[] = [];
   let runBuffer: InlineRun[] = [];
 
@@ -262,7 +291,7 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
 
   for (const child of [...el.childNodes]) {
     if (child.nodeType === Node.TEXT_NODE) {
-      runBuffer.push(...runsFrom(child, { link: inheritedLink }));
+      runBuffer.push(...runsFrom(child, inherited));
       continue;
     }
     if (child.nodeType !== Node.ELEMENT_NODE) continue;
@@ -277,24 +306,24 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
       nodes.push({
         kind: "heading",
         level: Number(tag[1]) as 1 | 2 | 3 | 4 | 5 | 6,
-        runs: runsFrom(element, { link: inheritedLink }),
+        runs: runsFrom(element, inherited),
       });
     } else if (tag === "P") {
       flush();
-      const runs = runsFrom(element, { link: inheritedLink });
+      const runs = runsFrom(element, inherited);
       if (runs.length) nodes.push({ kind: "paragraph", runs });
     } else if (tag === "UL" || tag === "OL") {
       flush();
       const items = [...element.children]
         .filter((li) => li.tagName === "LI")
         .map((li) => {
-          const nested = blocksFrom(li, inheritedLink);
+          const nested = blocksFrom(li, inherited);
           return nested.length
             ? nested
             : ([
                 {
                   kind: "paragraph",
-                  runs: runsFrom(li, { link: inheritedLink }),
+                  runs: runsFrom(li, inherited),
                 },
               ] as DocNode[]);
         });
@@ -308,7 +337,7 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
       flush();
       nodes.push({
         kind: "quote",
-        children: blocksFrom(element, inheritedLink),
+        children: blocksFrom(element, inherited),
       });
     } else if (tag === "HR") {
       flush();
@@ -323,24 +352,20 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
       // `<del><p>one</p><p>two</p></del>` from revision-tracking markup).
       // Treat any such element as a transparent block container in that
       // case -- recursing into its children as blocks -- rather than only
-      // special-casing <a>. Link semantics are anchor-specific, so only an
-      // <a> threads its href down so every run produced inside still
-      // carries the link; every other inline tag just recurses with the
-      // link it already inherited.
+      // special-casing <a>. Fold this element's own mark (if any) into the
+      // inherited set via `addMark` -- the same helper `runsFrom` uses --
+      // before recursing, so e.g. `<strong><p>one</p></strong>` still
+      // carries `bold: true` on its run even though `<strong>` itself is
+      // being treated as transparent rather than as an inline mark; a
+      // wrapper with no mark of its own (`<del>`, `<span>`, ...) just
+      // recurses with the marks it already inherited, unchanged.
       flush();
-      nodes.push(
-        ...blocksFrom(
-          element,
-          tag === "A"
-            ? (element.getAttribute("href") ?? inheritedLink)
-            : inheritedLink,
-        ),
-      );
+      nodes.push(...blocksFrom(element, addMark(element, inherited)));
     } else if (INLINE_TAGS.has(tag)) {
       // Genuine inline formatting sitting directly among block-level
       // content: buffer its runs rather than recursing, so marks and alt
       // text survive even without a wrapping <p>.
-      runBuffer.push(...runsFrom(element, { link: inheritedLink }));
+      runBuffer.push(...runsFrom(element, inherited));
     } else if (!BLOCK_TAGS.has(tag) && !containsBlockLevelContent(element)) {
       // An element that is neither a known inline tag nor a known block
       // tag -- a custom element, `<svg>`, a future HTML addition -- and
@@ -348,13 +373,13 @@ function blocksFrom(el: Element, inheritedLink?: string): DocNode[] {
       // inline, the same way a bare `<a>` does, so it doesn't force a
       // boundary mid-sentence (e.g. `Hello <custom-tag>world</custom-tag>
       // today.` stays one paragraph).
-      runBuffer.push(...runsFrom(element, { link: inheritedLink }));
+      runBuffer.push(...runsFrom(element, inherited));
     } else {
       // A known block tag (div/section/figure/dl/dt/dd/...), or an unknown
       // wrapper that genuinely contains block-level content: flush the
       // inline buffer, then recurse into its children as blocks.
       flush();
-      nodes.push(...blocksFrom(element, inheritedLink));
+      nodes.push(...blocksFrom(element, inherited));
     }
   }
 
