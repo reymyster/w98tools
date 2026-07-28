@@ -34,8 +34,110 @@ type TableCell = { text: string; tokens?: Token[] };
 // the alt text survives.
 const IMG_TAG_RE = /<img\b[^>]*>/gi;
 const ALT_ATTR_RE = /\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
-const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
-const TAG_RE = /<[^>]*>/g;
+
+/**
+ * Removes every HTML comment from `text`, in place of the lazy backtracking
+ * regex `/<!--[\s\S]*?-->/g` that used to live here. That pattern is
+ * quadratic on input containing many unterminated `<!--` openers: from every
+ * opener that never finds its `-->`, the lazy `[\s\S]*?` re-walks the entire
+ * remainder of the string looking for one. Measured on
+ * `"<!--".repeat(n) + "END"` with the old regex: n=5,000 -> 33ms, n=10,000 ->
+ * 128ms, n=20,000 -> 511ms (growth roughly quadrupling as n doubles) --
+ * consistent with the reviewer's own, larger-scale measurements (up to 70+
+ * seconds at n=100,000). This file runs synchronously on the main thread of a
+ * client-side exporter, so that blocks the tab on a botched paste of HTML
+ * source.
+ *
+ * `detect.ts` hit this exact class of bug first (see the comment above
+ * `OPENING_BLOCK_TAG_SOURCE` there) and fixed it by replacing a single
+ * backtracking pattern with independent linear passes. This is the same
+ * discipline applied here: two `indexOf` calls per comment, each resuming
+ * from where the previous one left off, so the total work across the whole
+ * string is linear no matter how many `<!--` openers never close. Measured
+ * with this implementation on the same inputs: n=5,000/10,000/20,000/40,000/
+ * 50,000/100,000 all complete in 0-2ms.
+ *
+ * An unterminated `<!--` (no matching `-->` before the end of `text`) drops
+ * everything from that `<!--` to the end of the string, rather than keeping
+ * the trailing text verbatim. That mirrors how a browser parses an unclosed
+ * HTML comment: it consumes everything after it, since nothing remains to
+ * signal where the comment would have ended.
+ */
+function stripHtmlComments(text: string): string {
+  let result = "";
+  let searchFrom = 0;
+  while (true) {
+    const start = text.indexOf("<!--", searchFrom);
+    if (start === -1) {
+      result += text.slice(searchFrom);
+      break;
+    }
+    result += text.slice(searchFrom, start);
+    const end = text.indexOf("-->", start + 4);
+    if (end === -1) break; // unterminated: drop the remainder, see above
+    searchFrom = end + 3;
+  }
+  return result;
+}
+
+// Matches one opening or closing tag, capturing its name when the tag starts
+// with a valid HTML name character (the group is `undefined` for things like
+// `<!DOCTYPE ...>`, which are stripped the same as any other unrecognized
+// tag). `[^>]*` -- a negated character class, not a backtracking `.*?` -- so
+// this can't repeat the quadratic mistake `stripHtmlComments` above just
+// replaced: there is no ambiguity for the engine to backtrack over.
+const TAG_RE = /<\/?([a-zA-Z][a-zA-Z0-9]*)?[^>]*>/g;
+
+// Block-level elements create a text boundary when stripped (see
+// `htmlFragmentText`); everything else -- inline elements (`span`, `em`,
+// `strong`, `a`, `code`, `sup`, `sub`, ...) and unrecognized tags -- is
+// removed with no boundary, same as before this fix.
+const BLOCK_TAGS = new Set([
+  "p",
+  "div",
+  "li",
+  "tr",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "blockquote",
+  "section",
+  "article",
+  "ul",
+  "ol",
+  "table",
+  "pre",
+]);
+
+// A sentinel for "a block tag used to be here" -- deliberately not a plain
+// space or "\n", and not a character real pasted text would ever contain, so
+// it stays distinguishable from actual whitespace content right up until the
+// final collapse step below. That distinction is what lets
+// `<div>text</div>` trim down to a bare "text" while a lone `<br>` (see
+// `tagBoundary` and the collapse logic in `htmlFragmentText`) still produces
+// a literal "\n" even though it, too, is the fragment's only content:
+// collapsing both the same way from the start would make it impossible to
+// tell "structural, drop if unpaired" from "this newline IS the content"
+// once they're both just whitespace. Built with `String.fromCharCode` (U+0000
+// NUL) rather than a literal control character in this file, so the source
+// itself never contains an invisible byte; the boundary regexes below are
+// likewise built with `RegExp(...)` from a template string instead of a
+// regex literal, for the same reason.
+const BLOCK_BOUNDARY = String.fromCharCode(0);
+const LEADING_BOUNDARY_RE = new RegExp(`^[ \\t${BLOCK_BOUNDARY}]+`);
+const TRAILING_BOUNDARY_RE = new RegExp(`[ \\t${BLOCK_BOUNDARY}]+$`);
+const WHITESPACE_RUN_RE = new RegExp(`[ \\t\\n${BLOCK_BOUNDARY}]+`, "g");
+const EDGE_SPACE_RE = /^[ \t]+|[ \t]+$/g;
+
+function tagBoundary(tagName: string | undefined): string {
+  if (!tagName) return "";
+  const name = tagName.toLowerCase();
+  if (name === "br") return "\n"; // a real line break: content, not structure
+  return BLOCK_TAGS.has(name) ? BLOCK_BOUNDARY : "";
+}
 
 // Single combined pattern so decoding happens in one left-to-right pass over
 // the original string. Chaining separate `.replace(/&amp;/g, "&")` calls
@@ -60,21 +162,53 @@ function decodeEntities(text: string): string {
 
 /**
  * Converts one raw HTML fragment (an `html` token's `text`) into plain,
- * readable text. `<img>` tags contribute their `alt` attribute (single- or
- * double-quoted; missing or empty contributes nothing); every other tag and
- * any HTML comment is dropped, keeping only the text between tags. Returns
- * `""` when nothing readable remains (a bare `<div>`, a stray `<br>`, a
- * comment) so callers can treat that as "contribute nothing" rather than
- * pushing an empty run/node.
+ * readable text.
+ *
+ * - `<img>` tags contribute their `alt` attribute (single- or double-quoted;
+ *   missing or empty contributes nothing).
+ * - Any HTML comment is dropped entirely (see `stripHtmlComments`).
+ * - Block-level tags (`p`, `div`, `li`, `tr`, `h1`-`h6`, `blockquote`,
+ *   `section`, `article`, `ul`, `ol`, `table`, `pre`) create a text boundary
+ *   when stripped, so `<p>one</p><p>two</p>` keeps "one" and "two" apart
+ *   instead of gluing them into "onetwo". Inline tags (`span`, `em`,
+ *   `strong`, `a`, `code`, `sup`, `sub`, ...) and unrecognized tags don't --
+ *   `<span>a</span><span>b</span>` stays "ab".
+ * - `<br>` becomes a literal "\n", matching how a markdown-native hard break
+ *   is handled in `inlineRuns` below (`case "br"`).
+ * - Runs of whitespace introduced by the boundaries above are collapsed to a
+ *   single separator so stripping never produces ragged spacing.
+ *
+ * Returns `""` when nothing readable remains (a bare `<div>`, an empty
+ * comment, an unrecognized void tag) so callers can treat that as
+ * "contribute nothing" rather than pushing an empty run/node. A lone `<br>`
+ * is the one exception -- it resolves to `"\n"`, never `""`, per above.
  */
 function htmlFragmentText(raw: string): string {
-  const withoutComments = raw.replace(HTML_COMMENT_RE, "");
+  const withoutComments = stripHtmlComments(raw);
   const withAltsInlined = withoutComments.replace(IMG_TAG_RE, (tag) => {
     const match = ALT_ATTR_RE.exec(tag);
     return match ? (match[1] ?? match[2] ?? "") : "";
   });
-  const withoutTags = withAltsInlined.replace(TAG_RE, "");
-  return decodeEntities(withoutTags).trim();
+  const withBoundaries = withAltsInlined.replace(
+    TAG_RE,
+    (_tag, name?: string) => tagBoundary(name),
+  );
+  // A block boundary with nothing meaningful on one side is just leftover
+  // structure, not a separator worth keeping -- drop it (and any plain
+  // space/tab glued to it) from both ends. A `<br>`'s real "\n" is left
+  // completely alone here, even at an edge, matching how the markdown-native
+  // `br` token always contributes literal "\n" regardless of position.
+  const trimmedBoundaries = withBoundaries
+    .replace(LEADING_BOUNDARY_RE, "")
+    .replace(TRAILING_BOUNDARY_RE, "");
+  const decoded = decodeEntities(trimmedBoundaries);
+  // Collapse every remaining run of whitespace/boundary characters into one
+  // separator: a newline if the run carries one (from a block boundary or a
+  // `<br>`), otherwise a single space.
+  const collapsed = decoded.replace(WHITESPACE_RUN_RE, (run) =>
+    run.includes("\n") || run.includes(BLOCK_BOUNDARY) ? "\n" : " ",
+  );
+  return collapsed.replace(EDGE_SPACE_RE, "");
 }
 
 /**

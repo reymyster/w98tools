@@ -123,4 +123,55 @@ describe("parseMarkdown", () => {
     const runs = node.kind === "paragraph" ? node.runs : [];
     expect(runs.map((r) => r.text).join("")).toBe("A & B");
   });
+
+  it("strips HTML comments in linear time even with many unterminated openers", async () => {
+    // Regression guard for the quadratic `/<!--[\s\S]*?-->/g` this used to
+    // use: each unclosed "<!--" made the old lazy regex re-walk the rest of
+    // the string looking for a "-->" that never comes. Measured with that
+    // regex: n=5,000 -> 33ms, n=10,000 -> 128ms, n=20,000 -> 511ms (roughly
+    // quadrupling as n doubles). The linear `indexOf`-driven scan this test
+    // guards should finish this (n=50,000) in low single-digit milliseconds;
+    // 500ms leaves generous headroom while still catching a regression back
+    // to quadratic behavior.
+    const input = `${"<!--".repeat(50_000)}END`;
+    const start = performance.now();
+    await parseMarkdown(input);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("drops everything after an unterminated HTML comment", async () => {
+    // No "-->" ever appears, so the never-closed comment consumes the rest
+    // of the fragment -- including the "</div>" and "after" that follow --
+    // the same way a browser treats an HTML comment that never closes.
+    const [node] = await parseMarkdown(
+      "<div>before <!-- never closes</div> after",
+    );
+    expect(node).toMatchObject({ kind: "paragraph" });
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("before");
+  });
+
+  it("keeps text from separate block tags apart instead of gluing", async () => {
+    const [node] = await parseMarkdown("<p>one</p><p>two</p>");
+    expect(node).toMatchObject({ kind: "paragraph" });
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    const text = runs.map((r) => r.text).join("");
+    expect(text).not.toBe("onetwo");
+    expect(text).toBe("one\ntwo");
+  });
+
+  it("preserves a raw <br> tag's line break between surrounding text", async () => {
+    const [node] = await parseMarkdown("a<br>b");
+    expect(node.kind).toBe("paragraph");
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("a\nb");
+  });
+
+  it("keeps adjacent inline tags glued together with no boundary", async () => {
+    const [node] = await parseMarkdown("<span>a</span><span>b</span>");
+    expect(node.kind).toBe("paragraph");
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("ab");
+  });
 });
