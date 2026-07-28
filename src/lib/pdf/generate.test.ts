@@ -13,4 +13,25 @@ describe("generatePdfBlob", () => {
     const head = new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer());
     expect(head).toBe("%PDF-");
   });
+
+  it("renders a parsed markdown document to a real PDF", async () => {
+    const { parseInput } = await import("./parse");
+    const { buildDocDefinition } = await import("./doc-def");
+
+    const nodes = await parseInput(
+      "# Title\n\nBody text.\n\n- one\n- two",
+      "markdown",
+    );
+    const blob = await generatePdfBlob(
+      buildDocDefinition(nodes, {
+        pageSize: "device",
+        margin: "normal",
+        title: "T",
+      }),
+    );
+
+    expect(blob.size).toBeGreaterThan(500);
+    const head = new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer());
+    expect(head).toBe("%PDF-");
+  });
 });
