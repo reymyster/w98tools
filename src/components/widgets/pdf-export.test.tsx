@@ -64,4 +64,42 @@ describe("PdfExport", () => {
 
     await waitFor(() => expect(generatePdfBlob).toHaveBeenCalled());
   });
+
+  it("revokes the orphaned preview URL when the input is cleared", async () => {
+    const user = userEvent.setup();
+    render(<PdfExport id={1} />);
+
+    const textarea = screen.getByLabelText(/content/i);
+    await user.type(textarea, "hello");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /download pdf/i }),
+      ).toBeEnabled(),
+    );
+
+    await user.clear(textarea);
+
+    await waitFor(() =>
+      expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith(
+        "blob:preview",
+      ),
+    );
+  });
+
+  it("disables download after the input has been cleared, even though a preview was already generated", async () => {
+    const user = userEvent.setup();
+    render(<PdfExport id={1} />);
+
+    const textarea = screen.getByLabelText(/content/i);
+    await user.type(textarea, "hello");
+
+    const downloadButton = screen.getByRole("button", {
+      name: /download pdf/i,
+    });
+    await waitFor(() => expect(downloadButton).toBeEnabled());
+
+    await user.clear(textarea);
+
+    await waitFor(() => expect(downloadButton).toBeDisabled());
+  });
 });

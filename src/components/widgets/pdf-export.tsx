@@ -32,6 +32,11 @@ export function PdfExport({ id }: { id: number }) {
   // overwriting the result of a newer one.
   useEffect(() => {
     if (!hasContent) {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+      blobRef.current = null;
       setPreviewUrl(null);
       setError(null);
       return;
