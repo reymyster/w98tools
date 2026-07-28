@@ -1,24 +1,64 @@
 import type { InputFormat } from "./types";
 
-// Detection is a cheap heuristic, not a parser, so it never needs the whole
-// document: a format is evident from its opening content. Sniffing a bounded
-// leading slice (rather than the full input) keeps every check below roughly
-// O(1) regardless of paste size -- important since this runs on every
-// (debounced) keystroke.
-const SNIFF_LENGTH = 4096;
+// Detection is a cheap heuristic, not a parser. Every check below is a single
+// linear pass (see the block-tag comment below for how that was made true),
+// so the only reason to cap input length at all is to bound the *constant*
+// factor -- roughly a dozen linear passes -- on pathological multi-megabyte
+// pastes, not to protect against quadratic blowup. 2,000,000 characters is
+// far beyond any real document a user would paste into this tool (a full
+// megabyte of prose still finishes in a few milliseconds -- see the
+// performance test), so this is set high enough that truncation should
+// never be the reason a real document misclassifies, while still keeping a
+// single keystroke on an absurdly large paste from blocking the UI thread.
+const SNIFF_LENGTH = 2_000_000;
 
 const DOCTYPE_OR_HTML = /^\s*<(!doctype\s+html|html[\s>])/i;
 
 const BLOCK_TAG_NAMES =
   "p|div|h[1-6]|ul|ol|li|table|blockquote|pre|article|section";
-// Two flat regexes -- an opening-tag test and a closing-tag test -- instead of
-// one regex spanning `open ... [\s\S]* ... close` with a backreference. The
-// combined form is quadratic on input with many unclosed tags (e.g.
-// "<p>".repeat(50000)): from every "<p>" the engine re-scans the remaining
-// text looking for a "</p>" that never comes. Neither regex here contains a
-// scan across arbitrary content, so each is a single linear pass.
-const OPENING_BLOCK_TAG = new RegExp(`<(?:${BLOCK_TAG_NAMES})\\b[^>]*>`, "i");
-const CLOSING_BLOCK_TAG = new RegExp(`</(?:${BLOCK_TAG_NAMES})\\s*>`, "i");
+// Two flat regex *sources* -- an opening-tag pattern and a closing-tag
+// pattern -- instead of one regex spanning `open ... [\s\S]* ... close` with
+// a backreference. The combined form is quadratic on input with many
+// unclosed tags (e.g. "<p>".repeat(50000)): from every "<p>" the engine
+// re-scans the remaining text looking for a "</p>" that never comes. Neither
+// pattern here contains a scan across arbitrary content, so each is a single
+// linear pass.
+//
+// Splitting into independent open/close tests dropped the original
+// backreference's "same tag" requirement -- any open block tag plus any
+// *different* closing block tag anywhere in the document used to qualify as
+// HTML. hasMatchingBlockTagPair() below restores that requirement by
+// collecting tag *names* from two linear matchAll() passes and checking for
+// a name common to both, which is still linear and never backtracks across
+// content.
+const OPENING_BLOCK_TAG_SOURCE = `<(${BLOCK_TAG_NAMES})\\b[^>]*>`;
+const CLOSING_BLOCK_TAG_SOURCE = `</(${BLOCK_TAG_NAMES})\\s*>`;
+
+/**
+ * True only when some block-tag name appears as both an opening tag and a
+ * closing tag somewhere in `text` (e.g. an opening `<p>` and a closing
+ * `</p>`, not necessarily the same pair). A fresh RegExp is constructed on
+ * each call rather than reused from module scope: matchAll() requires the
+ * `g` flag, and a shared `/g` regex carries `lastIndex` across calls, which
+ * would make a second call on the same input see stale (or no) matches.
+ * Constructing locally sidesteps that class of bug entirely.
+ */
+function hasMatchingBlockTagPair(text: string): boolean {
+  const openingNames = new Set<string>();
+  for (const match of text.matchAll(
+    new RegExp(OPENING_BLOCK_TAG_SOURCE, "gi"),
+  )) {
+    openingNames.add(match[1].toLowerCase());
+  }
+  if (openingNames.size === 0) return false;
+
+  for (const match of text.matchAll(
+    new RegExp(CLOSING_BLOCK_TAG_SOURCE, "gi"),
+  )) {
+    if (openingNames.has(match[1].toLowerCase())) return true;
+  }
+  return false;
+}
 
 // Void / unpaired elements are unambiguously HTML on their own -- they never
 // have a closing tag, so the pair check above would never catch them.
@@ -77,9 +117,7 @@ export function detectFormat(input: string): InputFormat {
 
   if (DOCTYPE_OR_HTML.test(sniff)) return "html";
   if (VOID_ELEMENT.test(sniff)) return "html";
-  if (OPENING_BLOCK_TAG.test(sniff) && CLOSING_BLOCK_TAG.test(sniff)) {
-    return "html";
-  }
+  if (hasMatchingBlockTagPair(sniff)) return "html";
 
   if (
     ATX_HEADING.test(sniff) ||

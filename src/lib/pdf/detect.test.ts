@@ -94,4 +94,43 @@ describe("detectFormat", () => {
   it("detects a GFM table as markdown", () => {
     expect(detectFormat("| a | b |\n|---|---|\n| 1 | 2 |")).toBe("markdown");
   });
+
+  it("detects nested block tags of different names as html", () => {
+    expect(detectFormat("<div><p>nested</p></div>")).toBe("html");
+  });
+
+  it("requires the same block-tag name to open and close before calling it html", () => {
+    expect(
+      detectFormat(
+        "Use <li> as an example, but don't format like </table> either.",
+      ),
+    ).toBe("text");
+    expect(
+      detectFormat(
+        "The <p> tag opens a paragraph and </div> closes a division.",
+      ),
+    ).toBe("text");
+  });
+
+  it("gives the same result on repeated calls with the same html input (no shared regex lastIndex state)", () => {
+    const input = "<p>hello</p><p>world</p>";
+    expect(detectFormat(input)).toBe("html");
+    expect(detectFormat(input)).toBe("html");
+  });
+
+  it("finds a markdown signal beyond the old 4096-character sniff cap", () => {
+    const input = `${"x".repeat(5000)}\n# Heading`;
+    expect(detectFormat(input)).toBe("markdown");
+  });
+
+  it("stays fast on a large realistic document (~1MB of prose)", () => {
+    const paragraph =
+      "The quick brown fox jumps over the lazy dog near the riverbank. " +
+      "It was a bright, calm morning and nothing much happened at all.\n\n";
+    const input = paragraph.repeat(Math.ceil(1_000_000 / paragraph.length));
+    const start = performance.now();
+    detectFormat(input);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(500);
+  });
 });
