@@ -38,15 +38,22 @@ function getHighestZIndex(state: WindowManagerState): number {
   return state.windows.reduce((p, c) => (p > c.zIndex ? p : c.zIndex), 1);
 }
 
+// Ids were Date.now(), so two windows opened within the same millisecond got
+// the same id. That id is the React key for the window list, which meant
+// duplicate keys and windows that could be dropped or duplicated. A counter
+// can't collide, and nothing persists ids across reloads.
+let lastWindowId = 0;
+const nextWindowId = () => ++lastWindowId;
+
 export const useWindowMangager = create<
   WindowManagerState & WindowManagerAction
 >((set) => ({
-  windows: [{ id: Date.now(), type: "Welcome", zIndex: 1 }],
+  windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
   addWindow: (type) =>
     set((prev) => ({
       windows: [
         ...prev.windows,
-        { id: Date.now(), type, zIndex: getHighestZIndex(prev) + 1 },
+        { id: nextWindowId(), type, zIndex: getHighestZIndex(prev) + 1 },
       ],
     })),
   removeWindow: (id) => {
@@ -69,7 +76,7 @@ export const useWindowMangager = create<
   },
   reset: () =>
     set({
-      windows: [{ id: Date.now(), type: "Welcome", zIndex: 1 }],
+      windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
     }),
 }));
 

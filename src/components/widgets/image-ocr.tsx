@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createWorker } from "tesseract.js";
 import { Widget } from "@/components/widget";
 
@@ -7,17 +7,27 @@ export function ImageOCR({ id }: { id: number }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [ocrText, setOcrText] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
+  // Tracked in a ref as well as state so cleanup can reach the current URL
+  // without re-subscribing an effect on every change.
+  const imageUrlRef = useRef<string | null>(null);
+
+  // Show a new image, revoking the previous object URL so it doesn't leak.
+  const showImage = (file: File) => {
+    if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current);
+    const url = URL.createObjectURL(file);
+    imageUrlRef.current = url;
+    setImageFile(file);
+    setImageUrl(url);
+    setOcrText("");
+    setProgress(0);
+    runOCR(file);
+  };
 
   // handle file uploads
   const handleFiles = (files: FileList) => {
     const file = files[0];
     if (file?.type.startsWith("image/")) {
-      setImageFile(file);
-      const url = URL.createObjectURL(file);
-      setImageUrl(url);
-      setOcrText("");
-      setProgress(0);
-      runOCR(file);
+      showImage(file);
     }
   };
 
@@ -31,12 +41,7 @@ export function ImageOCR({ id }: { id: number }) {
             const file = new File([blob], "clipboard-image", {
               type: blob.type,
             });
-            setImageFile(file);
-            const url = URL.createObjectURL(file);
-            setImageUrl(url);
-            setOcrText("");
-            setProgress(0);
-            runOCR(file);
+            showImage(file);
             return;
           }
         }
@@ -46,12 +51,16 @@ export function ImageOCR({ id }: { id: number }) {
     }
   };
 
-  // clean up if Widget unmounted
+  // Revoke the last object URL when the widget unmounts. Empty deps are what
+  // make this correct: the previous version had no dependency array at all, so
+  // the cleanup ran after every render and revoked the URL of the image still
+  // on screen. Empty deps are also StrictMode-safe, since the ref is still
+  // null during the simulated unmount/remount on mount.
   useEffect(() => {
     return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current);
     };
-  });
+  }, []);
 
   const runOCR = async (img: File | null) => {
     if (!img) return;
