@@ -18,18 +18,29 @@ let pdfMakePromise: Promise<PdfMake> | null = null;
 function loadPdfMake(): Promise<PdfMake> {
   if (!pdfMakePromise) {
     pdfMakePromise = (async () => {
-      const [pdfMakeModule, timesModule, courierModule] = await Promise.all([
-        import("pdfmake/build/pdfmake"),
-        import("pdfmake/build/standard-fonts/Times.js"),
-        import("pdfmake/build/standard-fonts/Courier.js"),
-      ]);
-      const pdfMake = (pdfMakeModule.default ?? pdfMakeModule) as PdfMake;
-      const times = timesModule.default ?? timesModule;
-      const courier = courierModule.default ?? courierModule;
+      try {
+        const [pdfMakeModule, timesModule, courierModule] = await Promise.all([
+          import("pdfmake/build/pdfmake"),
+          import("pdfmake/build/standard-fonts/Times.js"),
+          import("pdfmake/build/standard-fonts/Courier.js"),
+        ]);
+        const pdfMake = (pdfMakeModule.default ?? pdfMakeModule) as PdfMake;
+        const times = timesModule.default ?? timesModule;
+        const courier = courierModule.default ?? courierModule;
 
-      pdfMake.addVirtualFileSystem({ ...times.vfs, ...courier.vfs });
-      pdfMake.addFonts({ ...times.fonts, ...courier.fonts });
-      return pdfMake;
+        pdfMake.addVirtualFileSystem({ ...times.vfs, ...courier.vfs });
+        pdfMake.addFonts({ ...times.fonts, ...courier.fonts });
+        return pdfMake;
+      } catch (e) {
+        // A rejected promise memoised forever would poison the loader for the
+        // whole page lifetime after a single transient chunk-load failure
+        // (routine when a tab is left open across a deploy). Clearing it here
+        // lets the next call retry from scratch instead of replaying the same
+        // rejection endlessly. The success path above never resets this, so
+        // a load that does succeed is still cached for the page's lifetime.
+        pdfMakePromise = null;
+        throw e;
+      }
     })();
   }
   return pdfMakePromise;

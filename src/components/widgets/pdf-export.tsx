@@ -8,6 +8,22 @@ import type { InputFormat, MarginName, PageSizeName } from "@/lib/pdf/types";
 
 const DEBOUNCE_MS = 400;
 
+// The standard-14 Times font is single-byte WinAnsi-encoded: anything outside
+// Latin-1 (Japanese, Cyrillic, emoji, ...) silently renders as the wrong
+// glyph rather than throwing. We deliberately don't switch fonts to fix that
+// (embedding one costs ~458 KB gzipped), so the best we can do is warn
+// instead of blocking generation or download. Iterating code points (rather
+// than a regex over UTF-16 code units) handles surrogate-pair characters
+// like emoji correctly without needing any literal non-ASCII source text.
+const LATIN1_MAX_CODE_POINT = 0xff;
+
+function hasNonLatin1(text: string): boolean {
+  for (const char of text) {
+    if ((char.codePointAt(0) ?? 0) > LATIN1_MAX_CODE_POINT) return true;
+  }
+  return false;
+}
+
 export function PdfExport({ id }: { id: number }) {
   const [source, setSource] = useState("");
   const [formatOverride, setFormatOverride] = useState<InputFormat | null>(
@@ -26,6 +42,7 @@ export function PdfExport({ id }: { id: number }) {
 
   const format = formatOverride ?? detectFormat(source);
   const hasContent = source.trim() !== "";
+  const showsNonLatin1Warning = hasNonLatin1(source);
 
   // Synchronising with an external system (the PDF engine) on a debounced
   // change is what effects are for. `cancelled` keeps a slow run from
@@ -39,6 +56,13 @@ export function PdfExport({ id }: { id: number }) {
       blobRef.current = null;
       setPreviewUrl(null);
       setError(null);
+      // Neither of these has anywhere else to reset once the field is empty:
+      // busy was never cleared on this path, so clearing mid-debounce left
+      // "Building PDF..." on screen forever; the format override is meant to
+      // stick only "until the input is cleared" (design spec), and this is
+      // that moment.
+      setBusy(false);
+      setFormatOverride(null);
       return;
     }
 
@@ -61,9 +85,18 @@ export function PdfExport({ id }: { id: number }) {
         setPreviewUrl(url);
         setError(null);
       } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Could not build the PDF.");
+        if (cancelled) return;
+        // A failure after a good preview must not leave the old iframe up
+        // with no visible error and Download still emitting the superseded
+        // blob -- clear both so the error branch renders and Download is
+        // disabled until a later attempt succeeds.
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current);
+          previewUrlRef.current = null;
         }
+        blobRef.current = null;
+        setPreviewUrl(null);
+        setError(e instanceof Error ? e.message : "Could not build the PDF.");
       } finally {
         if (!cancelled) setBusy(false);
       }
@@ -91,9 +124,27 @@ export function PdfExport({ id }: { id: number }) {
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData("text/html");
-    if (html) {
-      e.preventDefault();
-      setSource(html);
+    if (!html) return;
+    // Browsers put text/html on the clipboard for any rich copy, not just
+    // documents meant to replace this one, so this must only replace the
+    // selected range -- never the whole value -- or a second paste destroys
+    // everything typed before it.
+    e.preventDefault();
+
+    const textarea = e.currentTarget;
+    const selectionStart = textarea.selectionStart ?? textarea.value.length;
+    const selectionEnd = textarea.selectionEnd ?? textarea.value.length;
+    const wasEmpty = textarea.value.trim() === "";
+
+    setSource(
+      textarea.value.slice(0, selectionStart) +
+        html +
+        textarea.value.slice(selectionEnd),
+    );
+    // Only switch the format to HTML when the field was empty beforehand.
+    // Pasting into an existing document is a mixed document by definition,
+    // so silently reinterpreting the user's format choice would be wrong.
+    if (wasEmpty) {
       setFormatOverride("html");
     }
   };
@@ -108,8 +159,13 @@ export function PdfExport({ id }: { id: number }) {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `${name}.pdf`;
+    // Firefox and Safari can abort the download if the anchor is never in
+    // the document, or if the object URL is revoked synchronously right
+    // after click() -- both have to survive past this tick.
+    document.body.appendChild(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
@@ -152,6 +208,15 @@ export function PdfExport({ id }: { id: number }) {
             onChange={(e) => setSource(e.target.value)}
             onPaste={handlePaste}
           />
+          {/* Always mounted so its line reserves height and toggling the
+              warning never shifts the textarea above it. Non-blocking: the
+              built-in font just can't render these glyphs, generation and
+              download proceed regardless. */}
+          <p className="text-xs text-amber-800 leading-tight" role="status">
+            {showsNonLatin1Warning
+              ? "Characters outside the Latin-1 range (e.g. Japanese, Cyrillic, emoji) can't be rendered by the built-in font and will appear incorrect."
+              : " "}
+          </p>
         </div>
 
         <div className="field-row-stacked h-full">
@@ -221,8 +286,13 @@ export function PdfExport({ id }: { id: number }) {
             Download PDF
           </button>
         </div>
+        {/* Kept inside this same Widget.Status rather than as a sibling
+            Widget.Status: each one becomes its own flex-grow:1 status-bar
+            field, so a second field mounting and unmounting on every
+            debounce cycle was resizing the field above (and everything in
+            it) in lockstep. One field, reserved-space text, no reflow. */}
+        <p className="text-xs">{busy ? "Building PDF…" : " "}</p>
       </Widget.Status>
-      {busy && <Widget.Status>Building PDF…</Widget.Status>}
     </Widget>
   );
 }
