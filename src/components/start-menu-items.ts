@@ -1,4 +1,5 @@
 import logOffIcon from "@/assets/start-menu/log-off.png";
+import pdfExportIcon from "@/assets/start-menu/pdf-export.svg";
 import prettifyJsonIcon from "@/assets/start-menu/prettify-json.png";
 import resetWindowsIcon from "@/assets/start-menu/reset-windows.png";
 import searchReplaceIcon from "@/assets/start-menu/search-replace.png";
@@ -57,6 +58,11 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Prettify JSON",
     icon: prettifyJsonIcon,
     action: { kind: "open", widget: "PrettifyJson" },
+  },
+  {
+    label: "PDF Exporter",
+    icon: pdfExportIcon,
+    action: { kind: "open", widget: "PdfExport" },
     separatorAfter: true,
   },
   {

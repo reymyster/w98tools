@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
+import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { StartBar } from "./start-bar";
@@ -16,6 +17,7 @@ const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   SearchReplace: SearchReplaceWidget,
   Welcome: WelcomeWidget,
   OCR: OCRWidget,
+  PdfExport: PdfExportWidget,
 };
 
 export function WindowManager() {

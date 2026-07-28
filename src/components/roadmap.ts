@@ -31,6 +31,10 @@ export const ROADMAP: RoadmapGroup[] = [
     group: "Prettify",
     entries: [{ label: "JSON", widget: "PrettifyJson" }, { label: "SQL" }],
   },
+  {
+    group: "Export",
+    entries: [{ label: "PDF Export", widget: "PdfExport" }],
+  },
 ];
 
 /** Whole-number percentage of roadmap entries that have shipped. */

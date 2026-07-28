@@ -12,7 +12,8 @@ export type WidgetType =
   | "PrettifyJson"
   | "SearchReplace"
   | "Welcome"
-  | "OCR";
+  | "OCR"
+  | "PdfExport";
 
 export type WindowState = {
   id: number;
