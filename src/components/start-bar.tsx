@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useState } from "react";
 import { StartBarTime } from "./start-bar-time";
 import { StartBarWindowList } from "./start-bar-window-list";
-import { useWindowMangager } from "./window-manager";
+import { useWindowMangager } from "./window-store";
 
 // Menu rows are divs with menu/menuitem roles rather than <button>, because
 // 98.css styles buttons with a silver face, bevel shadow and min-width that

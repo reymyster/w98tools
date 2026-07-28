@@ -34,18 +34,21 @@ export function ImageOCR({ id }: { id: number }) {
   const handleClipboard = async () => {
     try {
       const items = await navigator.clipboard.read();
+
+      // Locate the first image synchronously, then read it once. Awaiting
+      // inside the loop serialised reads for entries we end up discarding.
+      let match: { item: ClipboardItem; type: string } | undefined;
       for (const item of items) {
-        for (const type of item.types) {
-          if (type.startsWith("image/")) {
-            const blob = await item.getType(type);
-            const file = new File([blob], "clipboard-image", {
-              type: blob.type,
-            });
-            showImage(file);
-            return;
-          }
+        const type = item.types.find((t) => t.startsWith("image/"));
+        if (type) {
+          match = { item, type };
+          break;
         }
       }
+      if (!match) return;
+
+      const blob = await match.item.getType(match.type);
+      showImage(new File([blob], "clipboard-image", { type: blob.type }));
     } catch (error) {
       console.error("Failed to read clipboard contents:", error);
     }
@@ -114,8 +117,15 @@ export function ImageOCR({ id }: { id: number }) {
         )}
         {ocrText && (
           <div className="mt-2">
-            <h3 className="font-mono !text-lg">Extracted Text</h3>
+            {/* The heading already names this field visually; pointing the
+                textarea at it gives screen readers the same name without
+                duplicating the text. The widget id keeps it unique when
+                several OCR windows are open. */}
+            <h3 id={`ocr-extracted-${id}`} className="font-mono !text-lg">
+              Extracted Text
+            </h3>
             <textarea
+              aria-labelledby={`ocr-extracted-${id}`}
               value={ocrText}
               readOnly
               rows={10}

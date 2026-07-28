@@ -12,7 +12,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Window, type WindowContainerProps } from "@/components/window";
-import { useWindowMangager } from "@/components/window-manager";
+import { useWindowMangager } from "@/components/window-store";
 
 export interface WidgetProps extends WindowContainerProps {
   windowID: number;

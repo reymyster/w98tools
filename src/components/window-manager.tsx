@@ -1,84 +1,22 @@
-import { create } from "zustand";
+import type { ComponentType } from "react";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { StartBar } from "./start-bar";
 import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
+import { useWindowMangager, type WidgetType } from "./window-store";
 
-export const widgetRegistry = {
+// Deliberately not exported: this module exports only its component so Fast
+// Refresh can preserve state across edits. Typing it as Record<WidgetType, …>
+// keeps the compiler enforcing that every widget type has a component.
+const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   Help: HelpWidget,
   PrettifyJson: PrettifyJSONWidget,
   SearchReplace: SearchReplaceWidget,
   Welcome: WelcomeWidget,
   OCR: OCRWidget,
-} as const;
-
-export type WidgetType = keyof typeof widgetRegistry;
-
-export type WindowState = {
-  id: number;
-  type: WidgetType;
-  zIndex: number;
 };
-
-type WindowManagerState = {
-  windows: WindowState[];
-};
-
-type WindowManagerAction = {
-  addWindow: (type: WidgetType) => void;
-  removeWindow: (id: WindowState["id"]) => void;
-  bringToTop: (id: WindowState["id"]) => void;
-  reset: () => void;
-};
-
-function getHighestZIndex(state: WindowManagerState): number {
-  if (state.windows.length === 0) return 1;
-  return state.windows.reduce((p, c) => (p > c.zIndex ? p : c.zIndex), 1);
-}
-
-// Ids were Date.now(), so two windows opened within the same millisecond got
-// the same id. That id is the React key for the window list, which meant
-// duplicate keys and windows that could be dropped or duplicated. A counter
-// can't collide, and nothing persists ids across reloads.
-let lastWindowId = 0;
-const nextWindowId = () => ++lastWindowId;
-
-export const useWindowMangager = create<
-  WindowManagerState & WindowManagerAction
->((set) => ({
-  windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
-  addWindow: (type) =>
-    set((prev) => ({
-      windows: [
-        ...prev.windows,
-        { id: nextWindowId(), type, zIndex: getHighestZIndex(prev) + 1 },
-      ],
-    })),
-  removeWindow: (id) => {
-    set((prev) => ({
-      windows: prev.windows.filter((window) => window.id !== id),
-    }));
-  },
-  bringToTop: (id) => {
-    set((prev) => ({
-      windows: prev.windows.map((w) => {
-        if (w.id !== id) return w;
-        const highestCurrent = getHighestZIndex(prev);
-        if (w.zIndex === highestCurrent) return w;
-        return {
-          ...w,
-          zIndex: highestCurrent + 1,
-        };
-      }),
-    }));
-  },
-  reset: () =>
-    set({
-      windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
-    }),
-}));
 
 export function WindowManager() {
   const windows = useWindowMangager((state) => state.windows);

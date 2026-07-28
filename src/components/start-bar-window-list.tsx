@@ -1,4 +1,4 @@
-import { useWindowMangager } from "./window-manager";
+import { useWindowMangager } from "./window-store";
 
 export function StartBarWindowList() {
   const windows = useWindowMangager((state) => state.windows);

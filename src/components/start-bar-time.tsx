@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 export function StartBarTime() {
-  const [time, setTime] = useState<string>(getFormattedTime());
+  // Passed by reference, not called: as a lazy initializer it runs once on
+  // mount instead of on every render with the result thrown away.
+  const [time, setTime] = useState<string>(getFormattedTime);
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
