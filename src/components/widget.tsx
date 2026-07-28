@@ -1,4 +1,4 @@
-import React, { useState, type ReactNode } from "react";
+import React, { type ReactNode, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useWindowSize } from "usehooks-ts";
 import {
@@ -30,7 +30,7 @@ export function Widget({
   const removeWindow = useWindowMangager((state) => state.removeWindow);
   const bringToTop = useWindowMangager((state) => state.bringToTop);
   const zIndex = useWindowMangager(
-    (state) => state.windows.find((w) => w.id === windowID)?.zIndex ?? 0
+    (state) => state.windows.find((w) => w.id === windowID)?.zIndex ?? 0,
   );
   const { width: windowWidth = 0, height: windowHeight = 0 } = useWindowSize();
   const bounds = { width: windowWidth, height: windowHeight - 48 };
@@ -54,8 +54,8 @@ export function Widget({
   const widgetHeight = state.isMinimized
     ? 36
     : state.isMaximized
-    ? bounds.height
-    : state.height;
+      ? bounds.height
+      : state.height;
   const widgetX = state.isMaximized ? 0 : state.x;
   const widgetY = state.isMaximized ? 0 : state.y;
 
@@ -63,17 +63,17 @@ export function Widget({
 
   const title = childArray.filter(
     (c): c is React.ReactElement =>
-      React.isValidElement(c) && c.type === Widget.Title
+      React.isValidElement(c) && c.type === Widget.Title,
   );
 
   const body = childArray.filter(
     (c): c is React.ReactElement =>
-      React.isValidElement(c) && c.type === Widget.Body
+      React.isValidElement(c) && c.type === Widget.Body,
   );
 
   const statuses = childArray.filter(
     (c): c is React.ReactElement =>
-      React.isValidElement(c) && c.type === Widget.Status
+      React.isValidElement(c) && c.type === Widget.Status,
   );
 
   const minimize = () =>
@@ -108,7 +108,7 @@ export function Widget({
       | "TopLeft"
       | "TopRight"
       | "BottomLeft"
-      | "BottomRight"
+      | "BottomRight",
   ) => {
     setState((prev) => ({
       ...prev,

@@ -12,7 +12,7 @@ const Container = React.forwardRef<HTMLDivElement, WindowContainerProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Container.displayName = "WindowContainer";
 

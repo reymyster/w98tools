@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Widget } from "@/components/widget";
 
 export function PrettifyJson({ id }: { id: number }) {
