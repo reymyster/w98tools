@@ -15,6 +15,10 @@ export default defineConfig({
     // Only our own specs; without this the widgets' own node_modules copies
     // of test files would be picked up too.
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // pdfmake's browser build (pdfmake/build/pdfmake) isn't pre-bundled by
+    // Vite's dep optimizer under Vitest, which otherwise leaves it unresolved
+    // in jsdom. Inlining it forces Vite to process and resolve it directly.
+    server: { deps: { inline: ["pdfmake"] } },
   },
   define: {
     // react-draggable (bundled inside react-rnd) reads
