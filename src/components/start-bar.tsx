@@ -50,15 +50,20 @@ export function StartBar() {
     closeMenu();
   };
 
-  const onRowKeyDown =
-    (activate: () => void) => (e: KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        activate();
-      } else if (e.key === "Escape") {
-        closeMenu();
-      }
-    };
+  // Takes the event rather than returning a handler: a curried factory reads
+  // to static analysis like a setState updater callback closing over other
+  // setState calls, which it isn't.
+  const handleRowKey = (
+    e: KeyboardEvent<HTMLDivElement>,
+    activate: () => void,
+  ) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      activate();
+    } else if (e.key === "Escape") {
+      closeMenu();
+    }
+  };
 
   return (
     <aside
@@ -107,7 +112,7 @@ export function StartBar() {
                 aria-haspopup={item.submenu ? "menu" : undefined}
                 aria-expanded={item.submenu ? expanded : undefined}
                 onClick={activate}
-                onKeyDown={onRowKeyDown(activate)}
+                onKeyDown={(e) => handleRowKey(e, activate)}
                 onMouseEnter={
                   item.submenu ? () => setOpenSubmenu(item.label) : undefined
                 }
@@ -147,7 +152,7 @@ export function StartBar() {
                             e.stopPropagation();
                             openSub();
                           }}
-                          onKeyDown={onRowKeyDown(openSub)}
+                          onKeyDown={(e) => handleRowKey(e, openSub)}
                         >
                           {sub.label}
                         </div>

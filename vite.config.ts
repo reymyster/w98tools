@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -6,6 +7,15 @@ import { defineConfig } from "vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  test: {
+    environment: "jsdom",
+    // No `globals: true` — specs import describe/it/expect explicitly, so TS
+    // sees them without needing vitest's ambient types in tsconfig.
+    setupFiles: ["./src/test/setup.ts"],
+    // Only our own specs; without this the widgets' own node_modules copies
+    // of test files would be picked up too.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+  },
   define: {
     // react-draggable (bundled inside react-rnd) reads
     // process.env.DRAGGABLE_DEBUG in its log() helper, which runs on drag and
