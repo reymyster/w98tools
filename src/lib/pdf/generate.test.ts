@@ -19,7 +19,7 @@ describe("generatePdfBlob", () => {
     const { buildDocDefinition } = await import("./doc-def");
 
     const nodes = await parseInput(
-      "# Title\n\nBody text.\n\n- one\n- two",
+      "# Title\n\nBody text with `inline code`.\n\n- one\n- two\n\n```\nconst x = 1;\n```",
       "markdown",
     );
     const blob = await generatePdfBlob(
@@ -31,6 +31,37 @@ describe("generatePdfBlob", () => {
     );
 
     expect(blob.size).toBeGreaterThan(500);
+    const head = new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer());
+    expect(head).toBe("%PDF-");
+  });
+
+  it("renders a code block without throwing (Courier must be registered)", async () => {
+    const { buildDocDefinition } = await import("./doc-def");
+
+    const blob = await generatePdfBlob(
+      buildDocDefinition([{ kind: "code", text: "const x = 1;" }], {
+        pageSize: "device",
+        margin: "normal",
+        title: "T",
+      }),
+    );
+
+    expect(blob.size).toBeGreaterThan(0);
+    const head = new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer());
+    expect(head).toBe("%PDF-");
+  });
+
+  it("renders a paragraph with an inline code run without throwing", async () => {
+    const { buildDocDefinition } = await import("./doc-def");
+
+    const blob = await generatePdfBlob(
+      buildDocDefinition(
+        [{ kind: "paragraph", runs: [{ text: "x", code: true }] }],
+        { pageSize: "device", margin: "normal", title: "T" },
+      ),
+    );
+
+    expect(blob.size).toBeGreaterThan(0);
     const head = new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer());
     expect(head).toBe("%PDF-");
   });

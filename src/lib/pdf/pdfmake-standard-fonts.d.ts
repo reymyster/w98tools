@@ -9,3 +9,15 @@ declare module "pdfmake/build/standard-fonts/Times.js" {
   };
   export default fontContainer;
 }
+
+declare module "pdfmake/build/standard-fonts/Courier.js" {
+  /** AFM metrics keyed by virtual path, e.g. "data/Courier.afm". */
+  const fontContainer: {
+    vfs: Record<string, { data: string; encoding?: string }>;
+    fonts: Record<
+      string,
+      { normal: string; bold: string; italics: string; bolditalics: string }
+    >;
+  };
+  export default fontContainer;
+}
