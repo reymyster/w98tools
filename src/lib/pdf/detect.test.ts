@@ -41,4 +41,57 @@ describe("detectFormat", () => {
   it("treats empty input as plain text", () => {
     expect(detectFormat("   ")).toBe("text");
   });
+
+  it("stays fast on input with many unclosed block tags (no quadratic backtracking)", () => {
+    const input = `${"<p>".repeat(50000)}text`;
+    const start = performance.now();
+    detectFormat(input);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("still detects **bold** and *em* on a single line as markdown", () => {
+    expect(detectFormat("This is **bold** text.")).toBe("markdown");
+    expect(detectFormat("This is *em* text.")).toBe("markdown");
+  });
+
+  it("still detects single-underscore emphasis on word boundaries as markdown", () => {
+    expect(detectFormat("This is _emphasis_ in a sentence.")).toBe("markdown");
+  });
+
+  it("treats identifier-style underscores as plain text, not emphasis", () => {
+    expect(
+      detectFormat(
+        "Set foo_bar to true and baz_qux to false in the settings panel.",
+      ),
+    ).toBe("text");
+    expect(
+      detectFormat(
+        "Update the user_id column first. Then check the session_token cookie.",
+      ),
+    ).toBe("text");
+    expect(
+      detectFormat(
+        "Open C:\\Users\\Test\\Documents\\report_v2_final.docx and review it.",
+      ),
+    ).toBe("text");
+    expect(
+      detectFormat(
+        "The __init__ method differs from __name__ in Python modules.",
+      ),
+    ).toBe("text");
+  });
+
+  it("detects void HTML elements as html", () => {
+    expect(detectFormat("Line one<br>Line two<br>Line three")).toBe("html");
+    expect(detectFormat('<img src="pic.jpg">')).toBe("html");
+  });
+
+  it("leaves a lone unclosed block tag as plain text (out of scope)", () => {
+    expect(detectFormat("<div>hello, this never closes")).toBe("text");
+  });
+
+  it("detects a GFM table as markdown", () => {
+    expect(detectFormat("| a | b |\n|---|---|\n| 1 | 2 |")).toBe("markdown");
+  });
 });
