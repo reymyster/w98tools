@@ -1,26 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Widget } from "@/components/widget";
 
 export function PrettifyJson({ id }: { id: number }) {
   const [txtSource, setSource] = useState("");
-  const [txtOutput, setOutput] = useState("");
-  const [valid, setValid] = useState(true);
 
-  useEffect(() => {
-    if (!txtSource) {
-      setOutput("");
-      setValid(true);
-      return;
-    }
+  // Derived from the source rather than synced via an effect, so there's no
+  // extra render pass and no chance of output going stale.
+  const { txtOutput, valid } = useMemo(() => {
+    if (!txtSource) return { txtOutput: "", valid: true };
 
     try {
-      const parsed = JSON.parse(txtSource);
-      setOutput(JSON.stringify(parsed, null, 5));
-      setValid(true);
+      return {
+        txtOutput: JSON.stringify(JSON.parse(txtSource), null, 5),
+        valid: true,
+      };
     } catch {
-      setValid(false);
+      return { txtOutput: "", valid: false };
     }
-  }, [txtSource, setOutput, setValid]);
+  }, [txtSource]);
 
   return (
     <Widget windowID={id} initialHeight={480} initialWidth={640}>

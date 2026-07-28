@@ -17,6 +17,7 @@ export function ImageOCR({ id }: { id: number }) {
       setImageUrl(url);
       setOcrText("");
       setProgress(0);
+      runOCR(file);
     }
   };
 
@@ -35,6 +36,7 @@ export function ImageOCR({ id }: { id: number }) {
             setImageUrl(url);
             setOcrText("");
             setProgress(0);
+            runOCR(file);
             return;
           }
         }
@@ -69,11 +71,6 @@ export function ImageOCR({ id }: { id: number }) {
     setProgress(1);
     await worker.terminate();
   };
-
-  // run OCR when imageFile changes
-  useEffect(() => {
-    runOCR(imageFile);
-  }, [imageFile]);
 
   return (
     <Widget windowID={id} initialHeight={600} initialWidth={600}>
