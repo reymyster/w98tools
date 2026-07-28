@@ -111,4 +111,73 @@ describe("parseHtml", () => {
     const nodes = parseHtml("<div><p>inside</p></div>");
     expect(nodes).toEqual([{ kind: "paragraph", runs: [{ text: "inside" }] }]);
   });
+
+  it("does not glue figcaption text to a preceding image's alt text", () => {
+    // Regression: figcaption is a genuine block element, not an inline run,
+    // so it must land in its own paragraph rather than being appended to
+    // the same run buffer as the image's alt text (which would render as
+    // the glued "a photoCaption text").
+    const nodes = parseHtml(
+      '<figure><img alt="a photo"><figcaption>Caption text</figcaption></figure>',
+    );
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "a photo" }] },
+      { kind: "paragraph", runs: [{ text: "Caption text" }] },
+    ]);
+  });
+
+  it("keeps dl term and definition text distinguishable", () => {
+    // Regression: dt/dd are block elements; without a boundary between them
+    // the term and definition glue into a single run-buffer paragraph
+    // ("HTMLHyperText Markup Language").
+    const nodes = parseHtml(
+      "<dl><dt>HTML</dt><dd>HyperText Markup Language</dd></dl>",
+    );
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "HTML" }] },
+      { kind: "paragraph", runs: [{ text: "HyperText Markup Language" }] },
+    ]);
+  });
+
+  it("treats an anchor wrapping block content as a block container and preserves the link", () => {
+    const nodes = parseHtml('<a href="https://e.com"><p>one</p><p>two</p></a>');
+    expect(nodes).toEqual([
+      { kind: "paragraph", runs: [{ text: "one", link: "https://e.com" }] },
+      { kind: "paragraph", runs: [{ text: "two", link: "https://e.com" }] },
+    ]);
+  });
+
+  it("keeps a bare inline anchor's link when it wraps only inline content", () => {
+    const nodes = parseHtml('<a href="https://e.com">bare link</a>');
+    expect(nodes).toEqual([
+      {
+        kind: "paragraph",
+        runs: [{ text: "bare link", link: "https://e.com" }],
+      },
+    ]);
+  });
+
+  it("ignores noscript and template content alongside script and style", () => {
+    const nodes = parseHtml(
+      "<p>keep</p><noscript>hidden</noscript><template><p>tmpl</p></template>",
+    );
+    const text = nodes
+      .flatMap((n) => (n.kind === "paragraph" ? n.runs.map((r) => r.text) : []))
+      .join("");
+    expect(text).toBe("keep");
+  });
+
+  it("keeps head metadata out of the document", () => {
+    const nodes = parseHtml(
+      "<html><head><title>Ignored</title></head><body><p>keep</p></body></html>",
+    );
+    const text = nodes
+      .flatMap((n) => (n.kind === "paragraph" ? n.runs.map((r) => r.text) : []))
+      .join("");
+    expect(text).toBe("keep");
+  });
+
+  it("returns no nodes for comment-only content", () => {
+    expect(parseHtml("<div><!-- comment only --></div>")).toEqual([]);
+  });
 });

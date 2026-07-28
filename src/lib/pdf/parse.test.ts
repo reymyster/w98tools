@@ -30,4 +30,16 @@ describe("parseInput", () => {
     const nodes = await parseInput("<<<", "html");
     expect(nodes.length).toBeGreaterThan(0);
   });
+
+  it("falls back to plain text when html parses to no visible content (comment-only)", async () => {
+    // parseHtml("<div><!-- comment only --></div>") returns [] since a
+    // comment carries no visible text -- this is the real path that
+    // exercises the `nodes.length > 0 ? nodes : parseText(input)` fallback
+    // in parseInput; "<<<" (the previous test) actually parses to a
+    // paragraph containing the literal text and never touches the
+    // fallback branch at all.
+    const input = "<div><!-- comment only --></div>";
+    const nodes = await parseInput(input, "html");
+    expect(nodes).toEqual([{ kind: "paragraph", runs: [{ text: input }] }]);
+  });
 });
