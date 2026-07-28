@@ -62,10 +62,16 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   alongside it stops Fast Refresh preserving state; that's why the store lives
   in `window-store.ts`.
 - **`window.tsx` is deliberately one compound component** (`Window.Container`,
-  `.TitleBar`, `.Body`, …). react-doctor reports 7 `no-multi-comp` warnings
-  there and one `no-create-object-url-without-revoke` in `image-ocr.tsx` that
-  it can't trace through a ref. Both are known and expected — 8 findings is the
-  clean baseline.
+  `.TitleBar`, `.Body`, …), which is where 7 of react-doctor's `no-multi-comp`
+  warnings come from. Ten findings are known and accepted, so treat that as the
+  clean baseline rather than zero:
+  - 7 × `no-multi-comp` (the compound component above)
+  - 2 × `no-create-object-url-without-revoke` in `image-ocr.tsx` and
+    `pdf-export.tsx` — false positives; the revoke happens through a ref the
+    rule can't trace, and both are covered by tests
+  - 1 × `iframe-missing-sandbox` on the PDF preview — deliberate. Every
+    `sandbox` value blocks `blob:` URLs in Chrome, and the parsers reduce input
+    to structured text before pdfmake sees it.
 - **pdfmake uses only standard-14 fonts.** `src/lib/pdf/generate.ts` dynamically
   imports `pdfmake/build/standard-fonts/Times.js` (body text) and
   `pdfmake/build/standard-fonts/Courier.js` (code blocks) — 49.15 kB and
