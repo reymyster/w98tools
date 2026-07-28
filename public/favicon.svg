@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <title>W98Tools</title>
+  <defs>
+    <!-- Same sweep as 98.css's .title-bar: linear-gradient(90deg, navy, #1084d0) -->
+    <linearGradient id="titlebar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000080" />
+      <stop offset="1" stop-color="#1084d0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Window face -->
+  <rect width="16" height="16" fill="#c0c0c0" />
+
+  <!-- Single-pixel bevel. The real 98.css chrome is two pixels deep, but at a
+       16px favicon that spends a quarter of the width on borders and the
+       contents turn to mush. -->
+  <path d="M0 0h16v1H0zM0 0h1v16H0z" fill="#fff" />
+  <path d="M0 15h16v1H0zM15 0h1v16h-1z" fill="#0a0a0a" />
+  <path d="M1 14h14v1H1zM14 1h1v13h-1z" fill="#808080" />
+
+  <!-- Title bar with its close box -->
+  <rect x="2" y="2" width="12" height="4" fill="url(#titlebar)" />
+  <rect x="11" y="3" width="2" height="2" fill="#c0c0c0" />
+
+  <!-- Two-pixel text lines: 1px rows disappear at tab size. -->
+  <rect x="2" y="8" width="10" height="2" fill="#0a0a0a" />
+  <rect x="2" y="11" width="7" height="2" fill="#0a0a0a" />
+</svg>

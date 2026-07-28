@@ -1,54 +1,38 @@
-# React + TypeScript + Vite
+# w98tools
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A small collection of browser-based developer tools, dressed as Windows 98.
+Each tool opens in a draggable, resizable window on a desktop with a working
+Start menu and taskbar.
 
-Currently, two official plugins are available:
+Live at [w98tools.vercel.app](https://w98tools.vercel.app).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tools
 
-## Expanding the ESLint configuration
+- **Search & Replace** — literal (non-regex) find and replace, with character counts
+- **Prettify JSON** — format JSON, with inline validation
+- **Image OCR** — extract text from an uploaded or pasted image, via tesseract.js
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Planned: Split, Prettify SQL.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Built with
+
+React 19 · Vite 8 · TypeScript 7 · Tailwind CSS 4 ·
+[98.css](https://jdan.github.io/98.css/) · zustand · react-rnd · Biome · Vitest
+
+## Getting started
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+| Command | Does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run lint` | Lint and format check (Biome) |
+| `npm run format` | Apply formatting and safe fixes |
+| `npm test` | Run the test suite (Vitest) |
+| `npm run build` | Type-check and build for production |
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+Contributor notes — conventions, how to add a widget, and the handful of
+Vite/98.css gotchas — live in [CLAUDE.md](./CLAUDE.md).
