@@ -72,4 +72,55 @@ describe("parseMarkdown", () => {
     const runs = node.kind === "paragraph" ? node.runs : [];
     expect(runs.map((r) => r.text).join("")).toBe("a diagram");
   });
+
+  it("keeps an inline <img> tag's alt text alongside surrounding text", async () => {
+    const [node] = await parseMarkdown('before <img alt="html alt"> after');
+    expect(node.kind).toBe("paragraph");
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text)).toEqual(["before ", "html alt", " after"]);
+  });
+
+  it("keeps a standalone block <img> tag's alt text", async () => {
+    const [node] = await parseMarkdown('<img alt="standalone">');
+    expect(node).toMatchObject({ kind: "paragraph" });
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("standalone");
+  });
+
+  it("contributes nothing for an <img> tag with no alt attribute", async () => {
+    const nodes = await parseMarkdown("<img>");
+    expect(nodes).toEqual([]);
+  });
+
+  it("reads a single-quoted alt attribute", async () => {
+    const [node] = await parseMarkdown(
+      "before <img alt='single quoted'> after",
+    );
+    expect(node.kind).toBe("paragraph");
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text)).toEqual([
+      "before ",
+      "single quoted",
+      " after",
+    ]);
+  });
+
+  it("strips a raw <div> tag but keeps its text content", async () => {
+    const [node] = await parseMarkdown("<div>text</div>");
+    expect(node).toMatchObject({ kind: "paragraph" });
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("text");
+  });
+
+  it("contributes nothing for an HTML comment", async () => {
+    const nodes = await parseMarkdown("<!-- a comment -->");
+    expect(nodes).toEqual([]);
+  });
+
+  it("decodes named entities in raw HTML", async () => {
+    const [node] = await parseMarkdown("<div>A &amp; B</div>");
+    expect(node).toMatchObject({ kind: "paragraph" });
+    const runs = node.kind === "paragraph" ? node.runs : [];
+    expect(runs.map((r) => r.text).join("")).toBe("A & B");
+  });
 });
