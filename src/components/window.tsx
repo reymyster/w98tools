@@ -72,11 +72,15 @@ const StatusBar = React.forwardRef<
 ));
 StatusBar.displayName = "WindowStatusBar";
 
+// A div rather than a p: status fields can contain block-level content (e.g.
+// the OCR widget's progress indicator), which is invalid inside a paragraph.
+// 98.css styles .status-bar-field with an explicit margin:0, so the two render
+// identically.
 const StatusBarField = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("status-bar-field", className)} {...props}></p>
+  <div ref={ref} className={cn("status-bar-field", className)} {...props}></div>
 ));
 StatusBarField.displayName = "WindowStatusBarField";
 
