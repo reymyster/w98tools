@@ -29,7 +29,7 @@ export function PdfExport({ id }: { id: number }) {
   const [formatOverride, setFormatOverride] = useState<InputFormat | null>(
     null,
   );
-  const [pageSize, setPageSize] = useState<PageSizeName>("device");
+  const [pageSize, setPageSize] = useState<PageSizeName>("a4");
   const [margin, setMargin] = useState<MarginName>("normal");
   const [title, setTitle] = useState("");
   const [fileName, setFileName] = useState("");

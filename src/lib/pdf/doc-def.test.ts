@@ -14,7 +14,7 @@ const heading: DocNode = {
 };
 
 describe("buildDocDefinition", () => {
-  it("uses the device page size by default", () => {
+  it("maps the device page size to the reMarkable dimensions", () => {
     const def = buildDocDefinition([heading], options);
     expect(def.pageSize).toEqual({ width: 447, height: 596 });
   });

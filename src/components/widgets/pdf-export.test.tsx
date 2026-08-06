@@ -37,6 +37,11 @@ describe("PdfExport", () => {
     ).toBeDisabled();
   });
 
+  it("defaults the page size to A4", () => {
+    render(<PdfExport id={1} />);
+    expect(screen.getByLabelText(/page/i)).toHaveValue("a4");
+  });
+
   it("shows the detected format and enables download once there is content", async () => {
     const user = userEvent.setup();
     render(<PdfExport id={1} />);
