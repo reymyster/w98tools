@@ -1,11 +1,32 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DocNode } from "@/lib/pdf/types";
 import { PdfExport } from "./pdf-export";
 
 vi.mock("@/lib/pdf/generate", () => ({
   generatePdfBlob: vi.fn(
     async () => new Blob(["%PDF-1.7"], { type: "application/pdf" }),
+  ),
+}));
+
+// The real renderDocDiagrams needs mermaid, browser layout and canvas --
+// none of which exist in jsdom. The stand-in proves the *wiring*: the
+// widget must pass parsed nodes through it and build the PDF from its
+// output. Its own behavior is covered in src/lib/pdf/diagrams.test.ts.
+vi.mock("@/lib/pdf/diagrams", () => ({
+  renderDocDiagrams: vi.fn(async (nodes: DocNode[]) =>
+    nodes.map(
+      (node): DocNode =>
+        node.kind === "diagram"
+          ? {
+              kind: "image",
+              dataUrl: "data:image/png;base64,fake",
+              width: 100,
+              height: 50,
+            }
+          : node,
+    ),
   ),
 }));
 
@@ -73,6 +94,25 @@ describe("PdfExport", () => {
     await waitFor(() =>
       expect(screen.getByLabelText(/format/i)).toHaveValue("text"),
     );
+  });
+
+  it("renders mermaid fences into the generated document as images", async () => {
+    const { generatePdfBlob } = await import("@/lib/pdf/generate");
+    const user = userEvent.setup();
+    render(<PdfExport id={1} />);
+
+    await user.selectOptions(screen.getByLabelText(/format/i), "markdown");
+    await user.type(
+      screen.getByLabelText(/content/i),
+      "```mermaid\nflowchart LR\n```",
+    );
+
+    await waitFor(() => {
+      const def = vi.mocked(generatePdfBlob).mock.calls.at(-1)?.[0];
+      expect(def?.content).toContainEqual(
+        expect.objectContaining({ image: "data:image/png;base64,fake" }),
+      );
+    });
   });
 
   it("generates a preview from the input", async () => {

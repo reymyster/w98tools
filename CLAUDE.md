@@ -63,8 +63,8 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   in `window-store.ts`.
 - **`window.tsx` is deliberately one compound component** (`Window.Container`,
   `.TitleBar`, `.Body`, …), which is where 7 of react-doctor's `no-multi-comp`
-  warnings come from. Ten findings are known and accepted, so treat that as the
-  clean baseline rather than zero:
+  warnings come from. Fourteen findings are known and accepted, so treat that
+  as the clean baseline rather than zero:
   - 7 × `no-multi-comp` (the compound component above)
   - 2 × `no-create-object-url-without-revoke` in `image-ocr.tsx` and
     `pdf-export.tsx` — false positives; the revoke happens through a ref the
@@ -72,6 +72,11 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   - 1 × `iframe-missing-sandbox` on the PDF preview — deliberate. Every
     `sandbox` value blocks `blob:` URLs in Chrome, and the parsers reduce input
     to structured text before pdfmake sees it.
+  - 2 × `async-await-in-loop` in `diagrams.ts` — deliberate. Mermaid shares
+    DOM scratch space across renders, so diagrams render sequentially.
+  - 1 × `unused-dependency` (`class-variance-authority`) and 1 ×
+    `js-combine-iterations` in `parse-html.ts` — pre-existing drift the
+    documented baseline of ten never included.
 - **pdfmake uses only standard-14 fonts.** `src/lib/pdf/generate.ts` dynamically
   imports `pdfmake/build/standard-fonts/Times.js` (body text) and
   `pdfmake/build/standard-fonts/Courier.js` (code blocks) — 49.15 kB and
@@ -82,6 +87,18 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   style layer but forgot to register, so every document with code crashed PDF
   generation until caught in review. If another font name is introduced in
   `doc-def.ts`, it must be registered in `generate.ts` too.
+- **Mermaid fences export as raster images, on purpose.** ` ```mermaid `
+  blocks in Markdown become PNGs: mermaid draws the SVG in the browser, a
+  canvas rasterizes it at 3x, pdfmake gets an `image` node
+  (`src/lib/pdf/diagrams.ts`). Don't "upgrade" this to pdfmake's `{svg}`
+  node: its vendored svg-to-pdfkit ignores `<style>`-element CSS when handed
+  a string (its CSS mode needs a live DOM element, which pdfmake can't pass)
+  and can't draw `<foreignObject>` labels, so mermaid output loses its
+  styling. mermaid@11 is dynamically imported only when a document actually
+  contains a diagram — after touching this area, check `dist/assets/` still
+  splits it out of the main bundle. jsdom can't run mermaid (no layout or
+  canvas), so unit tests inject a fake renderer and `renderMermaidToPng`
+  itself is verified against the dev server.
 
 ## Dev server
 

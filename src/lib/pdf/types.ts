@@ -15,7 +15,11 @@ export type DocNode =
   | { kind: "list"; ordered: boolean; items: DocNode[][] }
   | { kind: "code"; text: string }
   | { kind: "quote"; children: DocNode[] }
-  | { kind: "rule" };
+  | { kind: "rule" }
+  /** A mermaid fence, parsed but not yet rendered (see diagrams.ts). */
+  | { kind: "diagram"; code: string }
+  /** width/height are the source SVG's natural size in CSS px. */
+  | { kind: "image"; dataUrl: string; width: number; height: number };
 
 export type PageSizeName = "device" | "a4" | "letter";
 export type MarginName = "narrow" | "normal" | "wide" | "wideOuter";

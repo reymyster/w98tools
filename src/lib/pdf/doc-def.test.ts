@@ -64,6 +64,68 @@ describe("buildDocDefinition", () => {
     expect(content[0].style).toBe("h1");
     expect(def.styles?.h1).toMatchObject({ bold: true });
   });
+
+  // Image sizing: natural size is CSS px x 0.75 = pt; images scale *down*
+  // proportionally to fit the content box (page minus margins), never up.
+  // Device page is 447x596 with normal margins of 40 all round, so the
+  // content box is 367x516.
+  it("places an image that fits at its natural size", () => {
+    const image: DocNode = {
+      kind: "image",
+      dataUrl: "data:image/png;base64,x",
+      width: 200,
+      height: 100,
+    };
+    const def = buildDocDefinition([image], options);
+    const [content] = def.content as { image?: string; width?: number }[];
+    expect(content.image).toBe("data:image/png;base64,x");
+    expect(content.width).toBeCloseTo(150);
+  });
+
+  it("scales a wide image down to the content width", () => {
+    const image: DocNode = {
+      kind: "image",
+      dataUrl: "data:image/png;base64,x",
+      width: 800,
+      height: 400,
+    };
+    const def = buildDocDefinition([image], options);
+    const [content] = def.content as { width?: number }[];
+    expect(content.width).toBeCloseTo(367);
+  });
+
+  it("scales a tall image down to fit the content height", () => {
+    const image: DocNode = {
+      kind: "image",
+      dataUrl: "data:image/png;base64,x",
+      width: 100,
+      height: 2000,
+    };
+    const def = buildDocDefinition([image], options);
+    const [content] = def.content as { width?: number }[];
+    // 75pt natural width x (516 content height / 1500pt natural height)
+    expect(content.width).toBeCloseTo(25.8);
+  });
+
+  it("sizes images against the selected page, not a hardcoded one", () => {
+    const image: DocNode = {
+      kind: "image",
+      dataUrl: "data:image/png;base64,x",
+      width: 800,
+      height: 400,
+    };
+    const def = buildDocDefinition([image], { ...options, pageSize: "a4" });
+    const [content] = def.content as { width?: number }[];
+    // A4 is 595.28 wide; normal margins leave 515.28.
+    expect(content.width).toBeCloseTo(515.28);
+  });
+
+  it("renders an unrendered diagram as a code block", () => {
+    const diagram: DocNode = { kind: "diagram", code: "flowchart LR" };
+    const def = buildDocDefinition([diagram], options);
+    const [content] = def.content as { text?: string; style?: string }[];
+    expect(content).toMatchObject({ text: "flowchart LR", style: "code" });
+  });
 });
 
 describe("resolveTitle", () => {

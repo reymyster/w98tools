@@ -45,6 +45,11 @@ describe("parseMarkdown", () => {
     expect(node).toEqual({ kind: "code", text: "const x = 1;" });
   });
 
+  it("maps mermaid fences to a diagram node", async () => {
+    const [node] = await parseMarkdown("```mermaid\nflowchart LR\nA-->B\n```");
+    expect(node).toEqual({ kind: "diagram", code: "flowchart LR\nA-->B" });
+  });
+
   it("maps blockquotes to a quote node", async () => {
     const [node] = await parseMarkdown("> quoted");
     expect(node.kind).toBe("quote");

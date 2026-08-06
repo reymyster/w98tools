@@ -24,6 +24,21 @@ export const PAGE_SIZES: Record<
 };
 
 /**
+ * The named sizes above resolve to numbers only inside pdfmake, so image
+ * sizing needs its own copy of the point dimensions (A4/LETTER values match
+ * pdfmake's standardPageSizes).
+ */
+const PAGE_DIMENSIONS: Record<PageSizeName, { width: number; height: number }> =
+  {
+    device: DEVICE_PAGE,
+    a4: { width: 595.28, height: 841.89 },
+    letter: { width: 612, height: 792 },
+  };
+
+/** CSS px (an SVG's natural size) to PDF points: 96 px/in over 72 pt/in. */
+const PX_TO_PT = 0.75;
+
+/**
  * [left, top, right, bottom], matching pdfmake's 4-tuple pageMargins order
  * (verified against pdfmake's normalizePageMargin, which maps a 4-element
  * array to { left: [0], top: [1], right: [2], bottom: [3] }).
@@ -50,7 +65,10 @@ function runsToContent(runs: InlineRun[]): ContentText {
   };
 }
 
-function nodeToContent(node: DocNode): Content[] {
+/** The area between the margins, in points -- what an image may fill. */
+type ContentBox = { width: number; height: number };
+
+function nodeToContent(node: DocNode, box: ContentBox): Content[] {
   switch (node.kind) {
     case "heading":
       return [{ ...runsToContent(node.runs), style: `h${node.level}` }];
@@ -70,19 +88,42 @@ function nodeToContent(node: DocNode): Content[] {
     case "quote":
       return [
         {
-          stack: node.children.flatMap(nodeToContent),
+          stack: node.children.flatMap((child) => nodeToContent(child, box)),
           margin: [16, 0, 0, 8],
           italics: true,
         },
       ];
     case "list": {
       const items = node.items.map((blocks) => ({
-        stack: blocks.flatMap(nodeToContent),
+        stack: blocks.flatMap((block) => nodeToContent(block, box)),
       }));
       return [
         node.ordered
           ? { ol: items, style: "body" }
           : { ul: items, style: "body" },
+      ];
+    }
+    case "diagram":
+      // Still unrendered (diagrams.ts wasn't run, or its render failed and
+      // it chose to keep the node) -- degrade to the pre-diagram behavior.
+      return [{ text: node.code, style: "code" }];
+    case "image": {
+      const naturalWidth = node.width * PX_TO_PT;
+      const naturalHeight = node.height * PX_TO_PT;
+      // Fit inside the content box, preserving aspect ratio (pdfmake keeps
+      // it when only `width` is given) and never scaling up: a small
+      // diagram at full-page size would just be a blurry diagram.
+      const scale = Math.min(
+        1,
+        box.width / naturalWidth,
+        box.height / naturalHeight,
+      );
+      return [
+        {
+          image: node.dataUrl,
+          width: naturalWidth * scale,
+          margin: [0, 4, 0, 8],
+        },
       ];
     }
   }
@@ -107,6 +148,11 @@ export function buildDocDefinition(
 ): TDocumentDefinitions {
   const margins = MARGINS[options.margin];
   const hasTitle = options.title.trim() !== "";
+  const page = PAGE_DIMENSIONS[options.pageSize];
+  const box: ContentBox = {
+    width: page.width - margins[0] - margins[2],
+    height: page.height - margins[1] - margins[3],
+  };
 
   return {
     pageSize: PAGE_SIZES[options.pageSize],
@@ -144,6 +190,6 @@ export function buildDocDefinition(
       color: "#666666",
       margin: [0, 6, 0, 0] as [number, number, number, number],
     }),
-    content: nodes.flatMap(nodeToContent),
+    content: nodes.flatMap((node) => nodeToContent(node, box)),
   };
 }

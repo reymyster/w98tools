@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Widget } from "@/components/widget";
 import { detectFormat } from "@/lib/pdf/detect";
+import { renderDocDiagrams } from "@/lib/pdf/diagrams";
 import { buildDocDefinition, resolveTitle } from "@/lib/pdf/doc-def";
 import { generatePdfBlob } from "@/lib/pdf/generate";
 import { parseInput } from "@/lib/pdf/parse";
@@ -71,7 +72,8 @@ export function PdfExport({ id }: { id: number }) {
 
     const timer = window.setTimeout(async () => {
       try {
-        const nodes = await parseInput(source, format);
+        const parsed = await parseInput(source, format);
+        const nodes = await renderDocDiagrams(parsed);
         const resolved = title.trim() || resolveTitle(nodes, fileName);
         const blob = await generatePdfBlob(
           buildDocDefinition(nodes, { pageSize, margin, title: resolved }),

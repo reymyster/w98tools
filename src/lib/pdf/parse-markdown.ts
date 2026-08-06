@@ -10,6 +10,7 @@ import type { DocNode, InlineRun } from "./types";
 type Token = {
   type: string;
   text?: string;
+  lang?: string;
   tokens?: Token[];
   depth?: number;
   ordered?: boolean;
@@ -339,7 +340,15 @@ function blockNodes(tokens: Token[]): DocNode[] {
       }
 
       case "code":
-        nodes.push({ kind: "code", text: String(token.text ?? "") });
+        // A mermaid fence carries a diagram, not code -- kept as its own
+        // node kind so diagrams.ts can render it later without re-parsing.
+        // marked's `lang` is the full info string (e.g. "mermaid theme=x"),
+        // so match on its first word only.
+        if (String(token.lang ?? "").split(/\s/, 1)[0] === "mermaid") {
+          nodes.push({ kind: "diagram", code: String(token.text ?? "") });
+        } else {
+          nodes.push({ kind: "code", text: String(token.text ?? "") });
+        }
         break;
 
       case "blockquote":
