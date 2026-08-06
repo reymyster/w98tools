@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createWorker } from "tesseract.js";
+import type { Worker as TesseractWorker } from "tesseract.js";
 import { Widget } from "@/components/widget";
 
 export function ImageOCR({ id }: { id: number }) {
@@ -54,34 +54,64 @@ export function ImageOCR({ id }: { id: number }) {
     }
   };
 
-  // Revoke the last object URL when the widget unmounts. Empty deps are what
-  // make this correct: the previous version had no dependency array at all, so
-  // the cleanup ran after every render and revoked the URL of the image still
-  // on screen. Empty deps are also StrictMode-safe, since the ref is still
-  // null during the simulated unmount/remount on mount.
+  // Revoke the last object URL and shut the OCR worker down when the widget
+  // unmounts. Empty deps are what make this correct: the previous version had
+  // no dependency array at all, so the cleanup ran after every render and
+  // revoked the URL of the image still on screen. Empty deps are also
+  // StrictMode-safe, since both refs are still null during the simulated
+  // unmount/remount on mount.
   useEffect(() => {
     return () => {
       if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current);
+      workerPromiseRef.current?.then((worker) => worker.terminate());
     };
   }, []);
 
-  const runOCR = async (img: File | null) => {
-    if (!img) return;
-    const worker = await createWorker("eng", undefined, {
-      logger: (m) => {
-        console.log("m.status", m.status);
-        if (m.status === "recognizing text") {
-          setProgress(m.progress);
+  // One worker for the widget's lifetime, created on first use: spawning the
+  // Web Worker and instantiating the WASM core costs seconds per image when
+  // done per run. tesseract.js is also dynamically imported here so it stays
+  // out of the main bundle (same discipline as pdfmake/marked/mermaid).
+  // Memoising the *promise* (not the worker) keeps two quick successive
+  // images from racing two workers into existence; clearing it on failure
+  // lets a later attempt retry instead of replaying the same rejection.
+  const workerPromiseRef = useRef<Promise<TesseractWorker> | null>(null);
+
+  const getWorker = () => {
+    if (!workerPromiseRef.current) {
+      workerPromiseRef.current = (async () => {
+        try {
+          const { createWorker } = await import("tesseract.js");
+          return await createWorker("eng", undefined, {
+            logger: (m) => {
+              if (m.status === "recognizing text") {
+                setProgress(m.progress);
+              }
+            },
+          });
+        } catch (error) {
+          workerPromiseRef.current = null;
+          throw error;
         }
-      },
-    });
-    const {
-      data: { text },
-    } = await worker.recognize(img);
-    console.log({ text });
-    setOcrText(text);
-    setProgress(1);
-    await worker.terminate();
+      })();
+    }
+    return workerPromiseRef.current;
+  };
+
+  const runOCR = async (img: File) => {
+    try {
+      const worker = await getWorker();
+      const {
+        data: { text },
+      } = await worker.recognize(img);
+      setOcrText(text);
+    } catch (error) {
+      console.error("OCR failed:", error);
+    } finally {
+      // On success this completes the progress bar; on failure it clears the
+      // bar instead of leaving it stuck mid-way forever. The worker is kept
+      // for the next attempt either way -- unmount is what terminates it.
+      setProgress(1);
+    }
   };
 
   return (

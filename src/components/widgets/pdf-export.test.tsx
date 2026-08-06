@@ -262,6 +262,20 @@ describe("PdfExport", () => {
   // renders as the wrong glyph -- no throw, no warning. The standard-14
   // Times font isn't being swapped out, so the fix is a visible, non-
   // blocking warning instead.
+  it("does not warn for ASCII text containing newlines", async () => {
+    // Regression guard for the warning's range check: control characters
+    // (newline, tab) are inside Latin-1 and must never trip the warning.
+    const user = userEvent.setup();
+    render(<PdfExport id={1} />);
+
+    await user.type(
+      screen.getByLabelText(/content/i),
+      "line one\nline two\tend",
+    );
+
+    expect(screen.queryByText(/latin-1/i)).not.toBeInTheDocument();
+  });
+
   it("shows a non-blocking warning for characters outside the Latin-1 range", async () => {
     const user = userEvent.setup();
     render(<PdfExport id={1} />);

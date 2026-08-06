@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import { type ComponentType, memo } from "react";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
 import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
@@ -11,13 +11,17 @@ import { useWindowMangager, type WidgetType } from "./window-store";
 // Deliberately not exported: this module exports only its component so Fast
 // Refresh can preserve state across edits. Typing it as Record<WidgetType, …>
 // keeps the compiler enforcing that every widget type has a component.
+// memo() because the only prop is the stable numeric id: when the windows
+// array genuinely changes (open/close/raise), unchanged widgets skip
+// re-executing their whole body -- widgets track their own z-order and
+// content through the store and their own state.
 const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
-  Help: HelpWidget,
-  PrettifyJson: PrettifyJSONWidget,
-  SearchReplace: SearchReplaceWidget,
-  Welcome: WelcomeWidget,
-  OCR: OCRWidget,
-  PdfExport: PdfExportWidget,
+  Help: memo(HelpWidget),
+  PrettifyJson: memo(PrettifyJSONWidget),
+  SearchReplace: memo(SearchReplaceWidget),
+  Welcome: memo(WelcomeWidget),
+  OCR: memo(OCRWidget),
+  PdfExport: memo(PdfExportWidget),
 };
 
 export function WindowManager() {

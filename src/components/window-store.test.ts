@@ -62,6 +62,20 @@ describe("window store", () => {
     expect(store().windows.map((w) => w.zIndex)).toEqual(before);
   });
 
+  it("keeps the same windows array when bringToTop is a no-op", () => {
+    // Referential, not just structural, equality: every subscriber to
+    // state.windows re-renders on a new array reference, and bringToTop
+    // fires on every click in an already-focused window.
+    store().addWindow("Help");
+    const before = store().windows;
+    const top = store().windows.at(-1);
+
+    if (!top) throw new Error("expected a window on top");
+    store().bringToTop(top.id);
+
+    expect(store().windows).toBe(before);
+  });
+
   it("removes only the window asked for", () => {
     store().addWindow("Help");
     store().addWindow("PrettifyJson");

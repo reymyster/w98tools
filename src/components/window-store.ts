@@ -61,17 +61,20 @@ export const useWindowMangager = create<
     }));
   },
   bringToTop: (id) => {
-    set((prev) => ({
-      windows: prev.windows.map((w) => {
-        if (w.id !== id) return w;
-        const highestCurrent = getHighestZIndex(prev);
-        if (w.zIndex === highestCurrent) return w;
-        return {
-          ...w,
-          zIndex: highestCurrent + 1,
-        };
-      }),
-    }));
+    set((prev) => {
+      // Return prev itself when nothing changes. This action fires on every
+      // click in an already-focused window, and a fresh array reference --
+      // even with identical items -- re-renders every state.windows
+      // subscriber, which cascades into every open widget re-running.
+      const target = prev.windows.find((w) => w.id === id);
+      const highestCurrent = getHighestZIndex(prev);
+      if (!target || target.zIndex === highestCurrent) return prev;
+      return {
+        windows: prev.windows.map((w) =>
+          w.id === id ? { ...w, zIndex: highestCurrent + 1 } : w,
+        ),
+      };
+    });
   },
   reset: () =>
     set({
