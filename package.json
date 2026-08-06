@@ -16,7 +16,6 @@
   "dependencies": {
     "@radix-ui/react-context-menu": "^2.2.14",
     "98.css": "^0.1.21",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.27.0",
     "marked": "^18.0.7",
