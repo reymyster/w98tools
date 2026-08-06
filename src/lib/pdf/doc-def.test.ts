@@ -120,6 +120,46 @@ describe("buildDocDefinition", () => {
     expect(content.width).toBeCloseTo(515.28);
   });
 
+  it("drops unsafe link schemes but keeps the link text", () => {
+    // pdfkit writes the href into a PDF /URI action verbatim; some viewers
+    // will act on javascript:/data:/file: targets, so only safe schemes may
+    // survive into the annotation.
+    const runFor = (link: string) => {
+      const def = buildDocDefinition(
+        [{ kind: "paragraph", runs: [{ text: "click", link }] }],
+        options,
+      );
+      const [content] = def.content as {
+        text: { text: string; link?: string }[];
+      }[];
+      return content.text[0];
+    };
+
+    for (const bad of [
+      "javascript:alert(1)",
+      "data:text/html;base64,PGI+",
+      "file:///etc/passwd",
+      "vbscript:x",
+      " javascript:alert(1)",
+    ]) {
+      const run = runFor(bad);
+      expect(run.text).toBe("click");
+      expect(run.link).toBeUndefined();
+    }
+
+    for (const good of [
+      "https://example.com",
+      "http://example.com",
+      "mailto:a@b.c",
+      "tel:+15550100",
+      "#section",
+      "/relative/path",
+      "./sibling.md",
+    ]) {
+      expect(runFor(good).link).toBe(good);
+    }
+  });
+
   it("renders an unrendered diagram as a code block", () => {
     const diagram: DocNode = { kind: "diagram", code: "flowchart LR" };
     const def = buildDocDefinition([diagram], options);

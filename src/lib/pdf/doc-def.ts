@@ -53,15 +53,32 @@ export const MARGINS: Record<MarginName, [number, number, number, number]> = {
   wideOuter: [40, 40, 110, 40],
 };
 
+// pdfkit copies a link's href into the PDF's /URI action verbatim, with no
+// scheme validation of its own, and `marked` stopped sanitizing hrefs in v5
+// -- so this is the one choke point (both the markdown and HTML parsers
+// funnel through here) where javascript:/data:/file: schemes are kept out
+// of the exported document. Allowlist, not blocklist: web links, mail/tel,
+// same-document anchors and relative paths survive; anything else loses its
+// annotation but keeps its text.
+const SAFE_LINK_RE = /^(?:https?:|mailto:|tel:|#|\/|\.{0,2}\/)/i;
+
+function safeLink(href: string | undefined): string | undefined {
+  if (!href) return undefined;
+  return SAFE_LINK_RE.test(href.trim()) ? href : undefined;
+}
+
 function runsToContent(runs: InlineRun[]): ContentText {
   return {
-    text: runs.map((run) => ({
-      text: run.text,
-      bold: run.bold,
-      italics: run.italic,
-      ...(run.code ? { font: "Courier" } : {}),
-      ...(run.link ? { link: run.link, decoration: "underline" as const } : {}),
-    })),
+    text: runs.map((run) => {
+      const link = safeLink(run.link);
+      return {
+        text: run.text,
+        bold: run.bold,
+        italics: run.italic,
+        ...(run.code ? { font: "Courier" } : {}),
+        ...(link ? { link, decoration: "underline" as const } : {}),
+      };
+    }),
   };
 }
 

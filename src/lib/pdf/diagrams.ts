@@ -30,10 +30,20 @@ async function loadMermaid() {
       // Grayscale-friendly output for e-ink; also the least saturated of
       // mermaid's built-in themes on a white PDF page.
       theme: "neutral",
-      // Keep flowchart labels as SVG <text> instead of <foreignObject>
-      // HTML: foreignObject inside an SVG loaded as an <img> is the one
-      // part of rasterization with real cross-browser risk (Safari).
-      flowchart: { htmlLabels: false },
+      // "strict" is already mermaid 11's default (labels DOMPurify'd, click
+      // callbacks and javascript: click-hrefs disabled, and %%{init}%%
+      // directives in a pasted document can't raise their own privileges) --
+      // pinned so a future default drift can't silently loosen it, since
+      // diagram source is arbitrary pasted input.
+      securityLevel: "strict",
+      // Keep labels as SVG <text> instead of <foreignObject> HTML for every
+      // diagram type: foreignObject inside an SVG loaded as an <img> is the
+      // one part of rasterization with real cross-browser risk (Safari).
+      // Root-level htmlLabels is the supported form; the per-diagram
+      // flowchart.htmlLabels it replaces is deprecated in v11.
+      htmlLabels: false,
+      // Also the default, pinned to bound render cost on hostile input.
+      maxTextSize: 50_000,
     });
     initialized = true;
   }

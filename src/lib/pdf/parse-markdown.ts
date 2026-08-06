@@ -33,7 +33,7 @@ type TableCell = { text: string; tokens?: Token[] };
 // treats real markdown images), everything else has its tags stripped and
 // its entities decoded. Images are still out of scope as *content* -- only
 // the alt text survives.
-const IMG_TAG_RE = /<img\b[^>]*>/gi;
+const IMG_TAG_RE = /<img\b[^>]{0,1024}>/gi;
 const ALT_ATTR_RE = /\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
 
 /**
@@ -84,10 +84,15 @@ function stripHtmlComments(text: string): string {
 // Matches one opening or closing tag, capturing its name when the tag starts
 // with a valid HTML name character (the group is `undefined` for things like
 // `<!DOCTYPE ...>`, which are stripped the same as any other unrecognized
-// tag). `[^>]*` -- a negated character class, not a backtracking `.*?` -- so
-// this can't repeat the quadratic mistake `stripHtmlComments` above just
-// replaced: there is no ambiguity for the engine to backtrack over.
-const TAG_RE = /<\/?([a-zA-Z][a-zA-Z0-9]*)?[^>]*>/g;
+// tag). The attribute scan is `[^>]{0,1024}`, not `[^>]*`: a negated class
+// has no backtracking ambiguity, but an *unbounded* one still re-scans to
+// end-of-input from every "<" when no ">" ever appears ("<a ".repeat(n)
+// arrives from marked as one giant html token), which is O(n^2) -- the same
+// class of blowup `stripHtmlComments` above was rewritten to avoid, reached
+// through a different door. The bound makes per-position work constant;
+// IMG_TAG_RE above is bounded for the same reason, sized generously since
+// real <img> tags carry long src/srcset attribute values.
+const TAG_RE = /<\/?([a-zA-Z][a-zA-Z0-9]*)?[^>]{0,1024}>/g;
 
 // Block-level elements create a text boundary when stripped (see
 // `htmlFragmentText`); everything else -- inline elements (`span`, `em`,

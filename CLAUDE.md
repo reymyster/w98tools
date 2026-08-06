@@ -63,7 +63,7 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   in `window-store.ts`.
 - **`window.tsx` is deliberately one compound component** (`Window.Container`,
   `.TitleBar`, `.Body`, …), which is where 7 of react-doctor's `no-multi-comp`
-  warnings come from. Thirteen findings are known and accepted, so treat that
+  warnings come from. Fourteen findings are known and accepted, so treat that
   as the clean baseline rather than zero:
   - 7 × `no-multi-comp` (the compound component above)
   - 2 × `no-create-object-url-without-revoke` in `image-ocr.tsx` and
@@ -77,6 +77,9 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   - 1 × `js-combine-iterations` in `parse-html.ts` — pre-existing; a
     `[...children].filter().map()` chain over a handful of list items,
     not worth churning.
+  - 1 × `unused-dev-dependency` (`@tesseract.js-data/eng`) — false
+    positive: consumed by filesystem path in `scripts/vendor-tesseract.mjs`,
+    which the import graph can't see.
 - **pdfmake uses only standard-14 fonts.** `src/lib/pdf/generate.ts` dynamically
   imports `pdfmake/build/standard-fonts/Times.js` (body text) and
   `pdfmake/build/standard-fonts/Courier.js` (code blocks) — 49.15 kB and
@@ -87,6 +90,30 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   style layer but forgot to register, so every document with code crashed PDF
   generation until caught in review. If another font name is introduced in
   `doc-def.ts`, it must be registered in `generate.ts` too.
+- **tesseract.js assets are vendored, never CDN-loaded.** Without explicit
+  paths, tesseract.js pulls its worker, WASM core and traineddata from
+  jsdelivr at runtime — third-party executable code in this origin.
+  `scripts/vendor-tesseract.mjs` (run by `predev`/`prebuild`) copies them
+  from node_modules into the gitignored `public/tesseract/`, and
+  `image-ocr.tsx` points `workerPath`/`corePath`/`langPath` there. If OCR
+  404s on `/tesseract/*`, the vendor script didn't run.
+- **The production CSP lives in `vercel.json`.** It allowlists exactly what
+  the app needs (blob workers + wasm for OCR, `blob:` frames for the PDF
+  preview, `data:` images for mermaid rasterization). It is deliberately not
+  a meta tag — that would apply in dev and break Vite's inline preamble.
+  Anything new that loads from another origin will be blocked in production
+  until the policy says otherwise, and that's the point.
+- **A negated character class can still be quadratic.** `[^>]*` has no
+  backtracking ambiguity, but unbounded it re-scans to end-of-input from
+  every candidate start when the terminator never appears — `"<br "`
+  repeated took whole minutes through `detectFormat` before the quantifiers
+  were bounded (`[^>]{0,256}` etc. in `detect.ts` and `parse-markdown.ts`).
+  New regexes over user input need a bound on every unbounded scan, and the
+  flood tests in `detect.test.ts` / `parse-markdown.test.ts` show the shape.
+- **PDF link annotations are scheme-allowlisted** in `doc-def.ts`
+  (`safeLink`): pdfkit writes hrefs into `/URI` actions verbatim and marked
+  stopped sanitizing in v5, so only http(s)/mailto/tel/anchor/relative
+  survive; a dropped link keeps its text.
 - **Mermaid fences export as raster images, on purpose.** ` ```mermaid `
   blocks in Markdown become PNGs: mermaid draws the SVG in the browser, a
   canvas rasterizes it at 3x, pdfmake gets an `image` node

@@ -81,7 +81,16 @@ export function ImageOCR({ id }: { id: number }) {
       workerPromiseRef.current = (async () => {
         try {
           const { createWorker } = await import("tesseract.js");
+          // Explicit local paths for every runtime asset. Left unset,
+          // tesseract.js falls back to cdn.jsdelivr.net for its worker
+          // script, WASM core and traineddata -- executable code fetched
+          // from a third party into this origin, with no SRI possible
+          // (the worker importScripts() them). scripts/vendor-tesseract.mjs
+          // copies these out of node_modules on predev/prebuild.
           return await createWorker("eng", undefined, {
+            workerPath: "/tesseract/worker.min.js",
+            corePath: "/tesseract/core",
+            langPath: "/tesseract/lang",
             logger: (m) => {
               if (m.status === "recognizing text") {
                 setProgress(m.progress);

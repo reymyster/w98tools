@@ -45,6 +45,18 @@ describe("parseMarkdown", () => {
     expect(node).toEqual({ kind: "code", text: "const x = 1;" });
   });
 
+  it("stays fast on a raw-HTML flood of tags that never close", async () => {
+    // marked hands the whole flood back as one html token; an unbounded
+    // [^>]* in the tag-stripping regex then re-scans to end-of-token from
+    // every "<" -- quadratic, several seconds at ~100 KB before the
+    // quantifiers were bounded.
+    const source = `<div>\n${"<a ".repeat(30000)}`;
+    const start = performance.now();
+    await parseMarkdown(source);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(500);
+  });
+
   it("maps mermaid fences to a diagram node", async () => {
     const [node] = await parseMarkdown("```mermaid\nflowchart LR\nA-->B\n```");
     expect(node).toEqual({ kind: "diagram", code: "flowchart LR\nA-->B" });

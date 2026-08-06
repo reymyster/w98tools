@@ -24,3 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 .superpowers/
+
+# Vendored at predev/prebuild by scripts/vendor-tesseract.mjs
+public/tesseract/

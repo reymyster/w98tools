@@ -50,6 +50,19 @@ describe("detectFormat", () => {
     expect(elapsed).toBeLessThan(500);
   });
 
+  it("stays fast on tag-like floods that never close (bounded, not quadratic, scans)", () => {
+    // "<br " repeated has no ">" anywhere, so an unbounded [^>]* re-scans to
+    // end-of-input from every "<" -- O(n^2) even without backtracking
+    // ambiguity. Same shape for "[a](" and an unbounded [^)]+. These inputs
+    // took double-digit seconds each before the quantifiers were bounded.
+    for (const flood of ["<br ".repeat(30000), "[a](".repeat(30000)]) {
+      const start = performance.now();
+      detectFormat(flood);
+      const elapsed = performance.now() - start;
+      expect(elapsed).toBeLessThan(500);
+    }
+  });
+
   it("still detects **bold** and *em* on a single line as markdown", () => {
     expect(detectFormat("This is **bold** text.")).toBe("markdown");
     expect(detectFormat("This is *em* text.")).toBe("markdown");
