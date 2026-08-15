@@ -255,4 +255,38 @@ describe("inferRoot", () => {
       error: "Root must be an object or array of objects.",
     });
   });
+
+  it("does not merge distinct shapes with delimiters in property names", () => {
+    // Object X has two properties: "a" (int) and "b" (string)
+    // Object Y has one property whose key is literally "a:int,b" (string)
+    // Both would produce identical signatures under the naive join-with-comma approach.
+    const result = infer('{"p":{"a":1,"b":"hello"},"q":{"a:int,b":"world"}}');
+
+    // Should have 3 objects: Root, and two distinct nested types for p and q
+    expect(result.objects).toHaveLength(3);
+
+    const root = declarationOrder(result)[0];
+    // p and q should have different types
+    expect(root.properties[0].type).not.toEqual(root.properties[1].type);
+
+    // Verify p's type has two properties: a and b
+    const pType = root.properties[0].type;
+    expect(pType).toMatchObject({ kind: "object" });
+    if (pType.kind === "object") {
+      const pObject = result.objects.find((o) => o.name === pType.ref);
+      expect(pObject?.properties).toHaveLength(2);
+      expect(pObject?.properties.map((p) => p.jsonKey)).toEqual(
+        expect.arrayContaining(["a", "b"]),
+      );
+    }
+
+    // Verify q's type has one property: the literal key "a:int,b"
+    const qType = root.properties[1].type;
+    expect(qType).toMatchObject({ kind: "object" });
+    if (qType.kind === "object") {
+      const qObject = result.objects.find((o) => o.name === qType.ref);
+      expect(qObject?.properties).toHaveLength(1);
+      expect(qObject?.properties[0].jsonKey).toBe("a:int,b");
+    }
+  });
 });

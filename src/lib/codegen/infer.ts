@@ -84,14 +84,17 @@ function signatureOf(node: TypeNode): string {
 }
 
 function propertiesSignature(properties: Property[]): string {
-  // Sorted so two objects with the same keys/types compare equal regardless
-  // of the order those keys appeared in the source JSON. The *declaration*
-  // (the `properties` array itself) keeps its original order — only this
-  // dedup key is order-independent.
-  return properties
-    .map((property) => `${property.jsonKey}:${signatureOf(property.type)}`)
-    .sort()
-    .join(",");
+  // Each property is encoded as [key, typeSignature] pair. JSON.stringify
+  // produces an unambiguous encoding that handles any characters in keys
+  // (including : and , which would create collisions in naive concatenation).
+  // Pairs are sorted by key so two objects with the same keys/types compare
+  // equal regardless of the order those keys appeared in the source JSON.
+  const pairs = properties.map((property) => [
+    property.jsonKey,
+    signatureOf(property.type),
+  ]);
+  pairs.sort((a, b) => a[0].localeCompare(b[0]));
+  return JSON.stringify(pairs);
 }
 
 function allocateName(hint: string, ctx: Context): string {
