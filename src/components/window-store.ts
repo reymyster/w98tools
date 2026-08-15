@@ -19,10 +19,27 @@ export type WidgetType =
   | "OCR"
   | "PdfExport";
 
+export type Geometry = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type WindowState = {
   id: number;
   type: WidgetType;
   zIndex: number;
+  /**
+   * Null until the widget mounts and reports the size it wants. The store
+   * can't compute this itself: the centring maths needs the viewport, and the
+   * preferred size is a prop of each widget component.
+   */
+  geometry: Geometry | null;
+  isMinimized: boolean;
+  isMaximized: boolean;
+  /** Geometry to return to when un-maximizing. */
+  restore: Geometry | null;
 };
 
 type WindowManagerState = {
@@ -33,6 +50,14 @@ type WindowManagerAction = {
   addWindow: (type: WidgetType) => void;
   removeWindow: (id: WindowState["id"]) => void;
   bringToTop: (id: WindowState["id"]) => void;
+  registerGeometry: (id: WindowState["id"], geometry: Geometry) => void;
+  setGeometry: (id: WindowState["id"], geometry: Geometry) => void;
+  minimizeWindow: (id: WindowState["id"]) => void;
+  maximizeWindow: (
+    id: WindowState["id"],
+    desktop: { width: number; height: number },
+  ) => void;
+  restoreWindow: (id: WindowState["id"]) => void;
   reset: () => void;
 };
 
@@ -48,16 +73,58 @@ function getHighestZIndex(state: WindowManagerState): number {
 let lastWindowId = 0;
 const nextWindowId = () => ++lastWindowId;
 
+function newWindow(type: WidgetType, zIndex: number): WindowState {
+  return {
+    id: nextWindowId(),
+    type,
+    zIndex,
+    geometry: null,
+    isMinimized: false,
+    isMaximized: false,
+    restore: null,
+  };
+}
+
+/**
+ * Replaces exactly one window's record and reuses every other record's object
+ * identity. Widgets subscribe per-window, so rebuilding an untouched record
+ * would re-render a window that did not change -- the same cascade the
+ * bringToTop comment above describes.
+ */
+function updateWindow(
+  state: WindowManagerState,
+  id: number,
+  change: (window: WindowState) => WindowState,
+): WindowManagerState {
+  const target = state.windows.find((w) => w.id === id);
+  if (!target) return state;
+
+  const updated = change(target);
+  if (updated === target) return state;
+
+  return {
+    windows: state.windows.map((w) => (w.id === id ? updated : w)),
+  };
+}
+
+/** Un-maximizes a window, returning it unchanged if it wasn't maximized. */
+function clearMaximized(w: WindowState): WindowState {
+  if (!w.isMaximized) return w;
+  return {
+    ...w,
+    geometry: w.restore ?? w.geometry,
+    restore: null,
+    isMaximized: false,
+  };
+}
+
 export const useWindowMangager = create<
   WindowManagerState & WindowManagerAction
 >((set) => ({
-  windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
+  windows: [newWindow("Welcome", 1)],
   addWindow: (type) =>
     set((prev) => ({
-      windows: [
-        ...prev.windows,
-        { id: nextWindowId(), type, zIndex: getHighestZIndex(prev) + 1 },
-      ],
+      windows: [...prev.windows, newWindow(type, getHighestZIndex(prev) + 1)],
     })),
   removeWindow: (id) => {
     set((prev) => ({
@@ -80,8 +147,42 @@ export const useWindowMangager = create<
       };
     });
   },
+  registerGeometry: (id, geometry) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) =>
+        w.geometry === null ? { ...w, geometry } : w,
+      ),
+    ),
+  setGeometry: (id, geometry) =>
+    set((prev) => updateWindow(prev, id, (w) => ({ ...w, geometry }))),
+  minimizeWindow: (id) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) => {
+        const unmaximized = clearMaximized(w);
+        if (unmaximized.isMinimized) return unmaximized;
+        return { ...unmaximized, isMinimized: true };
+      }),
+    ),
+  maximizeWindow: (id, desktop) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) => ({
+        ...w,
+        isMinimized: false,
+        isMaximized: true,
+        restore: w.geometry,
+        geometry: { x: 0, y: 0, width: desktop.width, height: desktop.height },
+      })),
+    ),
+  restoreWindow: (id) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) => {
+        const unmaximized = clearMaximized(w);
+        if (!unmaximized.isMinimized) return unmaximized;
+        return { ...unmaximized, isMinimized: false };
+      }),
+    ),
   reset: () =>
     set({
-      windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
+      windows: [newWindow("Welcome", 1)],
     }),
 }));

@@ -1,4 +1,4 @@
-import React, { type ReactNode, useState } from "react";
+import React, { type ReactNode, useEffect } from "react";
 import { Rnd } from "react-rnd";
 import { useWindowSize } from "usehooks-ts";
 import {
@@ -29,9 +29,20 @@ export function Widget({
 }: WidgetProps) {
   const removeWindow = useWindowMangager((state) => state.removeWindow);
   const bringToTop = useWindowMangager((state) => state.bringToTop);
-  const zIndex = useWindowMangager(
-    (state) => state.windows.find((w) => w.id === windowID)?.zIndex ?? 0,
+  const registerGeometry = useWindowMangager((state) => state.registerGeometry);
+  const setGeometry = useWindowMangager((state) => state.setGeometry);
+  const minimizeWindow = useWindowMangager((state) => state.minimizeWindow);
+  const maximizeWindow = useWindowMangager((state) => state.maximizeWindow);
+  const restoreWindow = useWindowMangager((state) => state.restoreWindow);
+
+  // Subscribing to this window's record -- not to state.windows -- is what
+  // keeps a drag from re-rendering every other open window. Actions preserve
+  // the object identity of records they don't touch, so this selector
+  // returns the same reference and bails out of re-rendering.
+  const win = useWindowMangager((state) =>
+    state.windows.find((w) => w.id === windowID),
   );
+
   const { width: windowWidth = 0, height: windowHeight = 0 } = useWindowSize();
   const bounds = { width: windowWidth, height: windowHeight - 48 };
   const initialX = Math.max((bounds.width - initialWidth) / 2, 0);
@@ -39,25 +50,54 @@ export function Widget({
 
   const bringMeToTop = () => bringToTop(windowID);
 
-  const [state, setState] = useState({
+  // The store can't compute the initial rectangle itself: centring needs the
+  // viewport, and the preferred size is a prop of this component. Register it
+  // once; registerGeometry is a no-op once geometry is non-null, so a
+  // remount (Fast Refresh, an error-boundary reset) can't yank a window the
+  // user has since moved.
+  useEffect(() => {
+    if (win && win.geometry === null) {
+      registerGeometry(windowID, {
+        x: initialX,
+        y: initialY,
+        width: initialWidth,
+        height: initialHeight,
+      });
+    }
+  }, [
+    win,
+    windowID,
+    registerGeometry,
+    initialX,
+    initialY,
+    initialWidth,
+    initialHeight,
+  ]);
+
+  const isMinimized = win?.isMinimized ?? false;
+  const isMaximized = win?.isMaximized ?? false;
+  const zIndex = win?.zIndex ?? 0;
+  // Fall back to the locally computed initial rectangle while the store's
+  // geometry is still null, so the first paint isn't at 0,0.
+  const geometry = win?.geometry ?? {
     x: initialX,
     y: initialY,
-    prevX: 0,
-    prevY: 0,
-    height: initialHeight,
     width: initialWidth,
-    isMinimized: false,
-    isMaximized: false,
-  });
+    height: initialHeight,
+  };
 
-  const widgetWidth = state.isMaximized ? bounds.width : state.width;
-  const widgetHeight = state.isMinimized
+  // isMaximized overrides display to the full desktop regardless of what's
+  // stored, the same way the old local state did -- so a drag gesture on a
+  // maximized window's title bar stays visually pinned, matching prior
+  // behaviour, even though it still writes through to the store below.
+  const widgetWidth = isMaximized ? bounds.width : geometry.width;
+  const widgetHeight = isMinimized
     ? 36
-    : state.isMaximized
+    : isMaximized
       ? bounds.height
-      : state.height;
-  const widgetX = state.isMaximized ? 0 : state.x;
-  const widgetY = state.isMaximized ? 0 : state.y;
+      : geometry.height;
+  const widgetX = isMaximized ? 0 : geometry.x;
+  const widgetY = isMaximized ? 0 : geometry.y;
 
   const childArray = React.Children.toArray(children);
 
@@ -76,28 +116,11 @@ export function Widget({
       React.isValidElement(c) && c.type === Widget.Status,
   );
 
-  const minimize = () =>
-    setState((prev) => ({ ...prev, isMinimized: true, isMaximized: false }));
+  const minimize = () => minimizeWindow(windowID);
 
-  const maximize = () =>
-    setState((prev) => ({
-      ...prev,
-      isMinimized: false,
-      isMaximized: true,
-      prevX: prev.x,
-      prevY: prev.y,
-    }));
+  const maximize = () => maximizeWindow(windowID, bounds);
 
-  const restore = () =>
-    setState((prev) => ({
-      ...prev,
-      isMinimized: false,
-      isMaximized: false,
-      x: Math.max(prev.x, prev.prevX),
-      y: Math.max(prev.y, prev.prevY),
-      prevX: 0,
-      prevY: 0,
-    }));
+  const restore = () => restoreWindow(windowID);
 
   const close = () => removeWindow(windowID);
 
@@ -110,10 +133,11 @@ export function Widget({
       | "BottomLeft"
       | "BottomRight",
   ) => {
-    setState((prev) => ({
-      ...prev,
-      isMaximized: false,
-      isMinimized: false,
+    // A window mid-minimize or mid-maximize can still reach this via the
+    // title-bar context menu, so clear both before applying the computed
+    // rectangle -- restoreWindow is a no-op when neither flag is set.
+    restoreWindow(windowID);
+    setGeometry(windowID, {
       y:
         to.includes("Half") || to.includes("Top")
           ? 0
@@ -123,9 +147,7 @@ export function Widget({
         ? bounds.height - 15
         : Math.round(bounds.height / 2) - 15,
       width: Math.round(bounds.width / 2) - 15,
-      prevX: 0,
-      prevY: 0,
-    }));
+    });
   };
 
   return (
@@ -134,23 +156,22 @@ export function Widget({
       position={{ x: widgetX, y: widgetY }}
       onDragStart={bringMeToTop}
       onDragStop={(_, data) => {
-        setState((prev) => ({ ...prev, x: data.x, y: data.y }));
+        setGeometry(windowID, { ...geometry, x: data.x, y: data.y });
       }}
       onResizeStart={bringMeToTop}
       onResizeStop={(_, __, ref, ___, pos) => {
-        setState((prev) => ({
-          ...prev,
+        setGeometry(windowID, {
           width: ref.offsetWidth,
           height: ref.offsetHeight,
           x: pos.x,
           y: pos.y,
-        }));
+        });
       }}
       style={{ zIndex }}
       onClick={bringMeToTop}
       dragHandleClassName="title-bar"
       bounds={"parent"}
-      enableResizing={!state.isMaximized && !state.isMinimized}
+      enableResizing={!isMaximized && !isMinimized}
     >
       <Window.Container {...props}>
         <ContextMenu>
@@ -158,19 +179,19 @@ export function Widget({
             <Window.TitleBar>
               {title}
               <Window.TitleBarControls>
-                {!state.isMinimized && !state.isMaximized && (
+                {!isMinimized && !isMaximized && (
                   <Window.TitleBarControlButton
                     buttonType="Minimize"
                     onClick={minimize}
                   />
                 )}
-                {(state.isMinimized || state.isMaximized) && (
+                {(isMinimized || isMaximized) && (
                   <Window.TitleBarControlButton
                     buttonType="Restore"
                     onClick={restore}
                   />
                 )}
-                {!state.isMinimized && !state.isMaximized && (
+                {!isMinimized && !isMaximized && (
                   <Window.TitleBarControlButton
                     buttonType="Maximize"
                     onClick={maximize}
@@ -212,8 +233,8 @@ export function Widget({
             </ContextMenuSub>
           </ContextMenuContent>
         </ContextMenu>
-        {!state.isMinimized && body}
-        {!state.isMinimized && statuses.length > 0 && (
+        {!isMinimized && body}
+        {!isMinimized && statuses.length > 0 && (
           <Window.StatusBar>
             {/* React.Children.toArray assigns each child a stable, unique
                 key, so there's no need to fall back to the array index. */}
