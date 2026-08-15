@@ -35,6 +35,10 @@ export const ROADMAP: RoadmapGroup[] = [
     ],
   },
   {
+    group: "Developer",
+    entries: [{ label: "JWT Decoder", widget: "JwtDecoder" }],
+  },
+  {
     group: "Export",
     entries: [{ label: "PDF Export", widget: "PdfExport" }],
   },

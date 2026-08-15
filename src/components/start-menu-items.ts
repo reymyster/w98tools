@@ -1,3 +1,4 @@
+import developerIcon from "@/assets/start-menu/developer.svg";
 import logOffIcon from "@/assets/start-menu/log-off.png";
 import pdfExportIcon from "@/assets/start-menu/pdf-export.svg";
 import prettifyJsonIcon from "@/assets/start-menu/prettify-json.png";
@@ -62,6 +63,11 @@ export const MENU_ITEMS: MenuItem[] = [
       { label: "JSON", widget: "PrettifyJson" },
       { label: "SQL", widget: "PrettifySql" },
     ],
+  },
+  {
+    label: "Developer",
+    icon: developerIcon,
+    submenu: [{ label: "JWT Decoder", widget: "JwtDecoder" }],
   },
   {
     label: "PDF Exporter",
