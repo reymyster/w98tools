@@ -1,8 +1,12 @@
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { StartBarTime } from "./start-bar-time";
 import { StartBarWindowList } from "./start-bar-window-list";
 import { MENU_ITEMS, type MenuAction } from "./start-menu-items";
+import {
+  WindowLayoutMenu,
+  type WindowLayoutMenuHandle,
+} from "./window-layout-menu";
 import { useWindowMangager } from "./window-store";
 
 // Rows are divs with menu/menuitem roles rather than <button>, because 98.css
@@ -29,6 +33,7 @@ export function StartBar() {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const reset = useWindowMangager((state) => state.reset);
   const addWindow = useWindowMangager((state) => state.addWindow);
+  const layoutMenuRef = useRef<WindowLayoutMenuHandle>(null);
 
   const closeMenu = () => {
     setMenuOpen(false);
@@ -65,10 +70,25 @@ export function StartBar() {
     }
   };
 
+  // Only fires the layout popup on empty taskbar background -- right-
+  // clicking a taskbar window button (or any other button in the bar, like
+  // Arrange Windows itself) should still get its own behaviour, not have
+  // this hijack it. Checking `e.target === e.currentTarget` isn't enough:
+  // StartBarWindowList's wrapper carries `grow-1`, so it fills the bar's
+  // empty middle space as far as hit-testing is concerned even when none of
+  // its buttons do, and a plain identity check would then treat that mostly-
+  // empty area as "a child" and swallow the right-click.
+  const handleBarContextMenu = (e: MouseEvent<HTMLElement>) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    layoutMenuRef.current?.open();
+  };
+
   return (
     <aside
       id="start-bar"
       className="bg-[#c0c0c0] z-[999999999] shadow-[0_-2px_#fffdfc,_0_-4px_#cce9eb] p-2 items-center flex justify-between"
+      onContextMenu={handleBarContextMenu}
     >
       <label id="start-button" htmlFor="start-button-input" className="grow-0">
         {/* The button face is drawn in CSS; this names it for screen readers
@@ -166,6 +186,7 @@ export function StartBar() {
         </div>
       </div>
       <StartBarWindowList />
+      <WindowLayoutMenu ref={layoutMenuRef} />
       <StartBarTime />
     </aside>
   );
