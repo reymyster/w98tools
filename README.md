@@ -2,7 +2,8 @@
 
 A small collection of browser-based developer tools, dressed as Windows 98.
 Each tool opens in a draggable, resizable window on a desktop with a working
-Start menu and taskbar.
+Start menu and taskbar. Open more than one, and the taskbar's Arrange
+Windows menu can tile or cascade them for you.
 
 Live at [w98tools.vercel.app](https://w98tools.vercel.app).
 
