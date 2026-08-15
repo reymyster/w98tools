@@ -54,8 +54,12 @@ added anew, which is what moves the Welcome window's "Implemented" figure; the
 
 ### Icons
 
-Four new Start-menu icons are needed in `src/assets/start-menu/`. Author them
-as small SVGs in the style of the existing `pdf-export.svg`.
+Only one new icon is needed. `SubMenuItem` in `start-menu-items.ts` is
+`{ label, widget }` with no icon field, so Prettify SQL and Split & Join —
+both of which live inside submenus — need no artwork. The Prettify group reuses
+the existing `prettify-json.png`. The new Developer group needs one icon,
+`src/assets/start-menu/developer.svg`, authored in the style of the existing
+`pdf-export.svg`.
 
 ## 1. Prettify SQL
 
