@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useWindowMangager } from "./window-store";
+import { tileableWindows, useWindowMangager } from "./window-store";
 
 const store = () => useWindowMangager.getState();
 
@@ -164,6 +164,21 @@ describe("window-store geometry", () => {
     expect(restored?.geometry).toEqual(RECT);
   });
 
+  it("refuses to maximize a window with no registered geometry", () => {
+    // Regression guard: maximizing before geometry is registered would store
+    // `restore: null`. clearMaximized's `w.restore ?? w.geometry` fallback
+    // would then read back the *maximized* full-desktop rectangle, stranding
+    // the window at desktop size with no way to restore its original bounds.
+    store().addWindow("PrettifyJson");
+    const id = idAt(1);
+
+    store().maximizeWindow(id, DESKTOP);
+    const win = store().windows.find((w) => w.id === id);
+
+    expect(win?.isMaximized).toBe(false);
+    expect(win?.geometry).toBeNull();
+  });
+
   it("minimizing clears maximized, and restoring clears both", () => {
     store().addWindow("PrettifyJson");
     const id = idAt(1);
@@ -204,6 +219,96 @@ describe("window-store record identity", () => {
     const topId = before.at(-1)?.id ?? 0;
 
     store().bringToTop(topId);
+
+    expect(store().windows).toBe(before);
+  });
+});
+
+describe("applyLayout", () => {
+  beforeEach(() => {
+    store().reset();
+  });
+
+  it("excludes the Welcome window", () => {
+    // reset() leaves a Welcome window open.
+    store().addWindow("PrettifyJson");
+    store().addWindow("SearchReplace");
+
+    expect(tileableWindows(store().windows).map((w) => w.type)).toEqual([
+      "PrettifyJson",
+      "SearchReplace",
+    ]);
+  });
+
+  it("excludes minimized windows", () => {
+    store().addWindow("PrettifyJson");
+    store().addWindow("SearchReplace");
+    store().minimizeWindow(idAt(1));
+
+    expect(tileableWindows(store().windows).map((w) => w.type)).toEqual([
+      "SearchReplace",
+    ]);
+  });
+
+  it("positions every tileable window and leaves the rest alone", () => {
+    store().addWindow("PrettifyJson");
+    store().addWindow("SearchReplace");
+    const welcome = store().windows[0];
+
+    store().applyLayout("side-by-side", DESKTOP);
+    const after = store().windows;
+
+    expect(after[0]).toBe(welcome);
+    expect(after[1].geometry).not.toBeNull();
+    expect(after[2].geometry).not.toBeNull();
+    expect(after[1].geometry?.x).toBe(0);
+    expect(after[2].geometry?.x).toBeGreaterThan(0);
+  });
+
+  it("un-maximizes a window it tiles", () => {
+    store().addWindow("PrettifyJson");
+    store().addWindow("SearchReplace");
+    const id = idAt(1);
+    store().registerGeometry(id, RECT);
+    store().maximizeWindow(id, DESKTOP);
+
+    store().applyLayout("side-by-side", DESKTOP);
+
+    expect(store().windows.find((w) => w.id === id)?.isMaximized).toBe(false);
+  });
+
+  it("leaves a minimized window minimized and unmoved", () => {
+    store().addWindow("PrettifyJson");
+    store().addWindow("SearchReplace");
+    store().addWindow("PrettifySql");
+    const id = idAt(1);
+    store().registerGeometry(id, RECT);
+    store().minimizeWindow(id);
+
+    store().applyLayout("side-by-side", DESKTOP);
+    const win = store().windows.find((w) => w.id === id);
+
+    expect(win?.isMinimized).toBe(true);
+    expect(win?.geometry).toEqual(RECT);
+  });
+
+  it("orders tiles by z-order so the active window lands last", () => {
+    store().addWindow("PrettifyJson");
+    store().addWindow("SearchReplace");
+    const lower = idAt(1);
+    store().bringToTop(lower);
+
+    store().applyLayout("side-by-side", DESKTOP);
+    const raised = store().windows.find((w) => w.id === lower);
+
+    expect(raised?.geometry?.x).toBeGreaterThan(0);
+  });
+
+  it("does nothing when fewer than two windows are tileable", () => {
+    store().addWindow("PrettifyJson");
+    const before = store().windows;
+
+    store().applyLayout("side-by-side", DESKTOP);
 
     expect(store().windows).toBe(before);
   });

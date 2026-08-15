@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import type { Desktop, LayoutKind } from "@/lib/window-layout";
+import { computeLayout } from "@/lib/window-layout";
 
 /**
  * Window state lives here rather than in window-manager.tsx so that file can
@@ -58,6 +60,7 @@ type WindowManagerAction = {
     desktop: { width: number; height: number },
   ) => void;
   restoreWindow: (id: WindowState["id"]) => void;
+  applyLayout: (kind: LayoutKind, desktop: Desktop) => void;
   reset: () => void;
 };
 
@@ -118,6 +121,21 @@ function clearMaximized(w: WindowState): WindowState {
   };
 }
 
+/**
+ * Window types a layout command ignores. Welcome opens on every load, so
+ * tiling would otherwise arrange a splash screen beside the user's first real
+ * tool. A set rather than an equality check so the next non-tool window
+ * inherits this for free.
+ */
+export const UNTILED_WIDGETS: ReadonlySet<WidgetType> = new Set(["Welcome"]);
+
+/** Windows a layout applies to, in z-order so the active one lands last. */
+export function tileableWindows(windows: WindowState[]): WindowState[] {
+  return windows
+    .filter((w) => !w.isMinimized && !UNTILED_WIDGETS.has(w.type))
+    .sort((a, b) => a.zIndex - b.zIndex);
+}
+
 export const useWindowMangager = create<
   WindowManagerState & WindowManagerAction
 >((set) => ({
@@ -165,13 +183,26 @@ export const useWindowMangager = create<
     ),
   maximizeWindow: (id, desktop) =>
     set((prev) =>
-      updateWindow(prev, id, (w) => ({
-        ...w,
-        isMinimized: false,
-        isMaximized: true,
-        restore: w.geometry,
-        geometry: { x: 0, y: 0, width: desktop.width, height: desktop.height },
-      })),
+      updateWindow(prev, id, (w) => {
+        // No registered geometry means no restore point. Maximizing anyway
+        // would store `restore: null`, and clearMaximized's `w.restore ??
+        // w.geometry` fallback would then read the *maximized* full-desktop
+        // rectangle back out, stranding the window at desktop size with no
+        // way back to its original bounds.
+        if (w.geometry === null) return w;
+        return {
+          ...w,
+          isMinimized: false,
+          isMaximized: true,
+          restore: w.geometry,
+          geometry: {
+            x: 0,
+            y: 0,
+            width: desktop.width,
+            height: desktop.height,
+          },
+        };
+      }),
     ),
   restoreWindow: (id) =>
     set((prev) =>
@@ -181,6 +212,22 @@ export const useWindowMangager = create<
         return { ...unmaximized, isMinimized: false };
       }),
     ),
+  applyLayout: (kind, desktop) =>
+    set((prev) => {
+      const targets = tileableWindows(prev.windows);
+      if (targets.length < 2) return prev;
+
+      const rects = computeLayout(kind, targets.length, desktop);
+      const rectById = new Map(targets.map((w, i) => [w.id, rects[i]]));
+
+      return {
+        windows: prev.windows.map((w) => {
+          const rect = rectById.get(w.id);
+          if (!rect) return w;
+          return { ...w, geometry: rect, isMaximized: false, restore: null };
+        }),
+      };
+    }),
   reset: () =>
     set({
       windows: [newWindow("Welcome", 1)],
