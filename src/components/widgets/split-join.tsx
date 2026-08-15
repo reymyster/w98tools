@@ -15,6 +15,8 @@ const JOINERS: Record<Exclude<DelimiterChoice, "custom">, string> = {
   tab: "\t",
 };
 
+const CHAR_FORMATTER = new Intl.NumberFormat();
+
 // Trimming and dropping empties are unconditional rather than checkboxes:
 // a column pasted out of SSMS otherwise yields a trailing empty item every
 // single time, and nobody wants '' in their IN list.
@@ -140,7 +142,7 @@ export function SplitJoin({ id }: { id: number }) {
           text nodes, which getByText("Items: 3") can't match. */}
       <Widget.Status>{`Items: ${count}`}</Widget.Status>
       <Widget.Status>
-        Output Chars: {new Intl.NumberFormat().format(txtOutput.length)}
+        Output Chars: {CHAR_FORMATTER.format(txtOutput.length)}
       </Widget.Status>
     </Widget>
   );
