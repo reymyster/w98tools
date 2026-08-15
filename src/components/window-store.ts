@@ -10,6 +10,7 @@ import { create } from "zustand";
 export type WidgetType =
   | "Help"
   | "PrettifyJson"
+  | "PrettifySql"
   | "SearchReplace"
   | "Welcome"
   | "OCR"

@@ -6,6 +6,7 @@ import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/searc
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { StartBar } from "./start-bar";
 import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
+import { PrettifySql as PrettifySQLWidget } from "./widgets/prettify-sql";
 import { useWindowMangager, type WidgetType } from "./window-store";
 
 // Deliberately not exported: this module exports only its component so Fast
@@ -18,6 +19,7 @@ import { useWindowMangager, type WidgetType } from "./window-store";
 const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   Help: memo(HelpWidget),
   PrettifyJson: memo(PrettifyJSONWidget),
+  PrettifySql: memo(PrettifySQLWidget),
   SearchReplace: memo(SearchReplaceWidget),
   Welcome: memo(WelcomeWidget),
   OCR: memo(OCRWidget),

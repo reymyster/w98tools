@@ -55,9 +55,12 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
   {
-    label: "Prettify JSON",
+    label: "Prettify",
     icon: prettifyJsonIcon,
-    action: { kind: "open", widget: "PrettifyJson" },
+    submenu: [
+      { label: "JSON", widget: "PrettifyJson" },
+      { label: "SQL", widget: "PrettifySql" },
+    ],
   },
   {
     label: "PDF Exporter",

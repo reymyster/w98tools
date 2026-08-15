@@ -29,7 +29,10 @@ export const ROADMAP: RoadmapGroup[] = [
   },
   {
     group: "Prettify",
-    entries: [{ label: "JSON", widget: "PrettifyJson" }, { label: "SQL" }],
+    entries: [
+      { label: "JSON", widget: "PrettifyJson" },
+      { label: "SQL", widget: "PrettifySql" },
+    ],
   },
   {
     group: "Export",
