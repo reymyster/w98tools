@@ -87,4 +87,41 @@ describe("emitCsharp", () => {
     expect(code).toContain("public string FirstName");
     expect(code).toContain("public string FirstName2");
   });
+
+  it("escapes a double quote in a JsonPropertyName key", () => {
+    const json = JSON.stringify({ 'a"b': "x" });
+    const code = emitCsharp(ir(json), "record");
+
+    expect(code).toContain('[JsonPropertyName("a\\"b")]');
+  });
+
+  it("escapes a backslash in a JsonPropertyName key", () => {
+    const json = JSON.stringify({ "C:\\Users": "x" });
+    const code = emitCsharp(ir(json), "record");
+
+    expect(code).toContain('[JsonPropertyName("C:\\\\Users")]');
+  });
+
+  it("escapes a newline in a JsonPropertyName key rather than emitting it literally", () => {
+    const json = JSON.stringify({ "a\nb": "x" });
+    const code = emitCsharp(ir(json), "record");
+
+    expect(code).toContain('[JsonPropertyName("a\\nb")]');
+    // A literal newline inside the attribute's string literal is CS1010.
+    expect(code).not.toMatch(/JsonPropertyName\("a\nb"\)/);
+  });
+
+  it("escapes a tab and carriage return in a JsonPropertyName key", () => {
+    const json = JSON.stringify({ "a\tb\rc": "x" });
+    const code = emitCsharp(ir(json), "record");
+
+    expect(code).toContain('[JsonPropertyName("a\\tb\\rc")]');
+  });
+
+  it("escapes other control characters as \\u escapes", () => {
+    const json = JSON.stringify({ "a\u0001b": "x" });
+    const code = emitCsharp(ir(json), "record");
+
+    expect(code).toContain('[JsonPropertyName("a\\u0001b")]');
+  });
 });

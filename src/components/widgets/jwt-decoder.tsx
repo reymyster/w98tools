@@ -25,7 +25,11 @@ export function JwtDecoder({ id }: { id: number }) {
 
   const claims = TIME_CLAIMS.flatMap(([claim, label]) => {
     const value = decoded?.payload[claim];
-    if (typeof value !== "number") return [];
+    // A non-finite claim (e.g. exp:1e400, which JSON.parse turns into
+    // Infinity) is treated as absent rather than rendered -- relativeFromNow
+    // guards too, but excluding it here also keeps the row from appearing
+    // with a value nobody asked for.
+    if (typeof value !== "number" || !Number.isFinite(value)) return [];
     return [
       {
         claim,

@@ -17,6 +17,30 @@ const PRIMITIVES: Record<string, string> = {
   unknown: "object",
 };
 
+/**
+ * Escapes a string for use inside a C# string literal. property.jsonKey is
+ * whatever the source JSON's author typed, so it can contain a quote, a
+ * backslash, a raw newline, or other control characters -- each of those,
+ * interpolated verbatim into `[JsonPropertyName("…")]`, produces C# that
+ * fails to compile (CS1003 / CS1009 / CS1010). See emit-typescript.ts's use
+ * of JSON.stringify for the same escaping problem on the other target.
+ */
+function csharpString(value: string): string {
+  let out = "";
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0;
+    if (char === "\\") out += "\\\\";
+    else if (char === '"') out += '\\"';
+    else if (char === "\n") out += "\\n";
+    else if (char === "\r") out += "\\r";
+    else if (char === "\t") out += "\\t";
+    else if (code < 0x20 || code === 0x7f)
+      out += `\\u${code.toString(16).padStart(4, "0")}`;
+    else out += char;
+  }
+  return out;
+}
+
 function renderType(node: TypeNode): string {
   const suffix = node.nullable ? "?" : "";
   if (node.kind === "primitive")
@@ -62,7 +86,9 @@ export function emitCsharp(result: InferResult, style: CsharpStyle): string {
 
       if (name !== property.jsonKey) {
         needsUsing = true;
-        lines.push(`    [JsonPropertyName("${property.jsonKey}")]`);
+        lines.push(
+          `    [JsonPropertyName("${csharpString(property.jsonKey)}")]`,
+        );
       }
 
       lines.push(

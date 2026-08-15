@@ -289,4 +289,39 @@ describe("inferRoot", () => {
       expect(qObject?.properties[0].jsonKey).toBe("a:int,b");
     }
   });
+
+  it("names many colliding-but-differently-shaped nested objects without quadratic blowup", () => {
+    // Each "groupI" property wraps a distinct-shaped object under the same
+    // "item" key, so every one of them pascal-cases to the same "Item" hint
+    // but forces a fresh suffix search on allocation (unlike an array, whose
+    // conflicting element shapes would just collapse to unknown and prune
+    // away instead of staying reachable -- see the "drops object types
+    // orphaned by a conflicting array-element unify" test above). Scanning
+    // candidate suffixes from 2 upward on every collision costs O(n^2):
+    // measured 34.7ms/1000, 106.7ms/2000, 398.9ms/4000, 1575.8ms/8000
+    // objects before this was fixed to track the next free suffix per base
+    // name in a Map. 8000 finishing well under that pre-fix time, but
+    // comfortably above a normal single-digit-ms run, catches a quadratic
+    // regression without being flaky.
+    const n = 8000;
+    const root: Record<string, unknown> = {};
+    for (let i = 0; i < n; i++) {
+      root[`group${i}`] = { item: { [`k${i}`]: i } };
+    }
+    const json = JSON.stringify(root);
+
+    const start = performance.now();
+    const outcome = inferRoot(JSON.parse(json), "Root");
+    const elapsed = performance.now() - start;
+
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      // Root, plus one wrapper and one distinct "Item*" type per group.
+      expect(outcome.result.objects).toHaveLength(2 * n + 1);
+      const names = outcome.result.objects.map((o) => o.name);
+      expect(names).toContain("Item");
+      expect(names).toContain(`Item${n}`);
+    }
+    expect(elapsed).toBeLessThan(500);
+  });
 });

@@ -72,6 +72,9 @@ type Context = {
   /** Shape signature to the name already minted for it. */
   bySignature: Map<string, string>;
   usedNames: Set<string>;
+  /** Next suffix to try for a base name, so repeated collisions on the same
+   * base don't rescan from 2 every time (see allocateName). */
+  nextSuffix: Map<string, number>;
 };
 
 function signatureOf(node: TypeNode): string {
@@ -97,6 +100,15 @@ function propertiesSignature(properties: Property[]): string {
   return JSON.stringify(pairs);
 }
 
+/**
+ * Pasted JSON can put thousands of distinctly-shaped values under the same
+ * name hint (e.g. every element of an array of differently-shaped objects).
+ * Rescanning candidate suffixes from 2 on every collision made this O(n^2)
+ * -- 1.5s+ for 8000 colliding names, synchronously inside a render. Tracking
+ * the next free suffix per base name means each collision resumes roughly
+ * where the last one left off instead of rescanning from the start, making
+ * allocation amortised O(1) per name.
+ */
 function allocateName(hint: string, ctx: Context): string {
   const base = pascalCase(hint);
   if (!ctx.usedNames.has(base)) {
@@ -104,10 +116,11 @@ function allocateName(hint: string, ctx: Context): string {
     return base;
   }
 
-  let suffix = 2;
+  let suffix = ctx.nextSuffix.get(base) ?? 2;
   while (ctx.usedNames.has(`${base}${suffix}`)) suffix += 1;
   const name = `${base}${suffix}`;
   ctx.usedNames.add(name);
+  ctx.nextSuffix.set(base, suffix + 1);
   return name;
 }
 
@@ -264,6 +277,7 @@ export function inferRoot(value: unknown, rootName: string): InferOutcome {
     objects: [],
     bySignature: new Map(),
     usedNames: new Set(),
+    nextSuffix: new Map(),
   };
 
   const root = inferValue(value, rootName, ctx);

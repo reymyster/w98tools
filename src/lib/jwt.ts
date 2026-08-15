@@ -60,6 +60,13 @@ const DIVISORS: [Intl.RelativeTimeFormatUnit, number][] = [
 
 /** "in 12 minutes" / "3 hours ago". `nowMs` is a parameter so tests are pure. */
 export function relativeFromNow(epochSeconds: number, nowMs: number): string {
+  // A claim of e.g. 1e400 parses to Infinity, and Intl.RelativeTimeFormat
+  // throws a RangeError on a non-finite value rather than returning
+  // anything -- uncaught, that unmounts the whole app (no error boundary
+  // exists). Untrusted tokens are the entire premise of this widget, so a
+  // malformed time claim must be treated as unrenderable, not fatal.
+  if (!Number.isFinite(epochSeconds)) return "unknown time";
+
   const deltaMs = epochSeconds * 1000 - nowMs;
 
   for (const [unit, unitMs] of DIVISORS) {

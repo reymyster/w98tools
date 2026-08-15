@@ -119,4 +119,27 @@ describe("JwtDecoder", () => {
 
     expect(screen.queryByText("Not a valid JWT.")).not.toBeInTheDocument();
   });
+
+  it("does not white-page on a non-finite time claim like exp:1e400", async () => {
+    // JSON.stringify(Infinity) collapses to "null", which wouldn't reproduce
+    // the bug, so the payload segment is base64url-encoded from raw JSON
+    // text instead -- exactly how JSON.parse('{"exp":1e400}') produces
+    // Infinity from a real (malformed) token.
+    const encodeRaw = (json: string) =>
+      btoa(String.fromCharCode(...new TextEncoder().encode(json)))
+        .replaceAll("+", "-")
+        .replaceAll("/", "_")
+        .replaceAll("=", "");
+    const rawToken = `${encodeRaw('{"alg":"HS256"}')}.${encodeRaw('{"exp":1e400}')}.sig`;
+
+    const user = setup();
+    render(<JwtDecoder id={1} />);
+
+    await user.click(token());
+    await user.paste(rawToken);
+
+    // The app must still be rendering the widget, not a white page.
+    expect(screen.getByLabelText("Token")).toBeInTheDocument();
+    expect(JSON.parse(payload().value)).toEqual({ exp: null });
+  });
 });

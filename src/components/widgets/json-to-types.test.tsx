@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { JsonToTypes } from "./json-to-types";
@@ -98,5 +98,67 @@ describe("JsonToTypes", () => {
 
     expect(output().value).toBe("");
     expect(screen.queryByText("Invalid JSON.")).not.toBeInTheDocument();
+  });
+
+  it("reports an error instead of crashing on deeply nested JSON", async () => {
+    // inferValue recurses per level of nesting; deep enough input blows the
+    // call stack (RangeError). JSON.parse itself handles this depth fine, so
+    // only the inference/emission step throws -- there is no error boundary
+    // anywhere in the app, so an uncaught throw here unmounts the whole tree.
+    const depth = 5000;
+    const deeplyNested = `${'{"a":'.repeat(depth)}1${"}".repeat(depth)}`;
+
+    const user = userEvent.setup();
+    render(<JsonToTypes id={1} />);
+
+    await user.click(source());
+    await user.paste(deeplyNested);
+
+    // The widget must still be on screen, with the output cleared and a
+    // status message shown -- not a white page.
+    expect(screen.getByLabelText("JSON")).toBeInTheDocument();
+    expect(output().value).toBe("");
+    expect(
+      screen.getByText("JSON is too deeply nested to convert."),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps radio groups and element ids independent across two open windows", async () => {
+    // `name` on a radio input is document-global, so two windows hardcoding
+    // the same name put all four radios in ONE group -- at most one radio
+    // can be checked across the whole document.
+    const user = userEvent.setup();
+    const { container } = render(
+      <>
+        <JsonToTypes id={1} />
+        <JsonToTypes id={2} />
+      </>,
+    );
+
+    const windows = container.querySelectorAll(".window");
+    expect(windows).toHaveLength(2);
+    const [first, second] = Array.from(windows) as HTMLElement[];
+
+    await user.click(within(second).getByLabelText("JSON"));
+    await user.paste('{"name":"x"}');
+    await user.click(within(second).getByLabelText("class"));
+
+    // The second window's own radio reflects the click...
+    expect(within(second).getByLabelText("class")).toBeChecked();
+    expect(within(second).getByLabelText("record")).not.toBeChecked();
+    // ...and its output actually matches what shows as selected.
+    expect(
+      (within(second).getByLabelText("Generated") as HTMLTextAreaElement).value,
+    ).toContain("public class Root");
+
+    // The first window is untouched, still on the default "record" radio.
+    expect(within(first).getByLabelText("record")).toBeChecked();
+    expect(within(first).getByLabelText("class")).not.toBeChecked();
+
+    // No duplicate element ids anywhere in the document.
+    const ids = Array.from(container.querySelectorAll("[id]")).map(
+      (el) => el.id,
+    );
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

@@ -84,6 +84,15 @@ describe("relativeFromNow", () => {
   it("falls back to seconds for sub-minute differences", () => {
     expect(relativeFromNow(now / 1000 + 5, now)).toBe("in 5 seconds");
   });
+
+  it("does not throw for a non-finite epoch, e.g. from a 1e400 claim", () => {
+    // JSON.parse('{"exp":1e400}') yields Infinity -- Intl.RelativeTimeFormat
+    // throws a RangeError on a non-finite value, which is otherwise
+    // uncaught and unmounts the whole app (no error boundary exists).
+    expect(() => relativeFromNow(Number.POSITIVE_INFINITY, now)).not.toThrow();
+    expect(() => relativeFromNow(Number.NEGATIVE_INFINITY, now)).not.toThrow();
+    expect(() => relativeFromNow(Number.NaN, now)).not.toThrow();
+  });
 });
 
 describe("isExpired", () => {
