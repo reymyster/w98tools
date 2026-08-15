@@ -22,7 +22,7 @@ describe("Welcome", () => {
     const user = userEvent.setup();
     render(<Welcome id={1} />);
 
-    await user.click(screen.getByText("JWT Decoder"));
+    await user.click(screen.getByRole("button", { name: "JWT Decoder" }));
 
     const windows = useWindowMangager.getState().windows;
     expect(windows.some((w) => w.type === "JwtDecoder")).toBe(true);
@@ -32,7 +32,7 @@ describe("Welcome", () => {
     const user = userEvent.setup();
     render(<Welcome id={1} />);
 
-    screen.getByText("JSON").focus();
+    screen.getByRole("button", { name: "JSON" }).focus();
     await user.keyboard("{Enter}");
 
     const windows = useWindowMangager.getState().windows;
@@ -43,7 +43,7 @@ describe("Welcome", () => {
     const user = userEvent.setup();
     render(<Welcome id={1} />);
 
-    screen.getByText("SQL").focus();
+    screen.getByRole("button", { name: "SQL" }).focus();
     await user.keyboard(" ");
 
     const windows = useWindowMangager.getState().windows;
@@ -78,27 +78,27 @@ describe("RoadmapList", () => {
     },
   ];
 
-  it("renders a shipped entry as an activatable control", () => {
+  it("renders a shipped entry as a native button", () => {
     render(<RoadmapList roadmap={fixture} />);
 
-    const item = screen.getByText("Shipped Tool");
-    expect(item).toHaveAttribute("role", "button");
-    expect(item).toHaveAttribute("tabIndex", "0");
+    const item = screen.getByRole("button", { name: "Shipped Tool" });
+    expect(item.tagName).toBe("BUTTON");
   });
 
   it("renders a planned entry as plain, non-interactive text", () => {
     render(<RoadmapList roadmap={fixture} />);
 
-    const item = screen.getByText("Planned Tool");
-    expect(item).not.toHaveAttribute("role");
-    expect(item).not.toHaveAttribute("tabIndex");
+    expect(
+      screen.queryByRole("button", { name: "Planned Tool" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Planned Tool").tagName).toBe("LI");
   });
 
   it("opens the shipped entry's widget when clicked", async () => {
     const user = userEvent.setup();
     render(<RoadmapList roadmap={fixture} />);
 
-    await user.click(screen.getByText("Shipped Tool"));
+    await user.click(screen.getByRole("button", { name: "Shipped Tool" }));
 
     const windows = useWindowMangager.getState().windows;
     expect(windows.some((w) => w.type === "Help")).toBe(true);
