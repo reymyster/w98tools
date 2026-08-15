@@ -37,7 +37,8 @@ Offered by count of eligible windows (see *Which windows participate* below):
 **Cascade** is always offered regardless of count, at every count ≥ 2. It is the
 universal fallback and the only sensible answer above four: a 3×3 grid of nine
 windows gives each one a pane too small to use, whereas cascade keeps every title
-bar visible and clickable, which is exactly what Windows 98 did.
+bar visible and clickable, which is exactly what Windows 98 did. Confirmed with
+the user — there is deliberately no grid layout for 5–6 windows.
 
 Ordering within a layout follows the windows' current z-order, lowest first, so
 the window you most recently used lands in the last slot rather than jumping
@@ -45,6 +46,12 @@ unpredictably.
 
 ## Which windows participate
 
+- **The Welcome window is excluded.** It opens by default on every load, so
+  including it would mean "tile everything" on a fresh page arranges a splash
+  screen beside your first real tool. It stays where it is and does not count
+  toward choosing the layout set. Implement this as a set of excluded
+  `WidgetType`s rather than a hardcoded `=== "Welcome"` check, so the next
+  non-tool window inherits the behaviour for free.
 - **Minimized windows are excluded** and stay minimized. They were minimized
   deliberately; a layout command should not undo that. They also do not count
   toward choosing the layout set — two open windows and three minimized ones
