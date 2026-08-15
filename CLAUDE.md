@@ -51,6 +51,15 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   `process` bare — without the define, dragging or maximizing a window throws
   and unmounts the whole app to a white page. Production builds were never
   affected.
+- **There is no error boundary anywhere in `src/`.** `main.tsx` renders
+  `<App/>` bare, so any throw during a widget's render — not just the
+  `DRAGGABLE_DEBUG` case above — unmounts the *entire* window tree to a
+  white page, losing every open window's state. `Intl.RelativeTimeFormat`
+  throwing on a `1e400` claim decoded from a pasted JWT, and `inferRoot`
+  overflowing the call stack on deeply-nested pasted JSON, both did this
+  before they were guarded. Any widget that parses untrusted input (JWTs,
+  JSON, SQL, …) must catch its own errors — a malformed paste is expected
+  input for these tools, not an exotic case worth letting escape render.
 - **`build.cssMinify` is pinned to `esbuild`.** Vite 8 defaults to lightningcss,
   which rejects the malformed `@media (not(hover))` rule shipped inside
   `98.css@0.1.21`. That rule is invalid CSS browsers already ignore, so don't
@@ -114,6 +123,16 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   (`safeLink`): pdfkit writes hrefs into `/URI` actions verbatim and marked
   stopped sanitizing in v5, so only http(s)/mailto/tel/anchor/relative
   survive; a dropped link keeps its text.
+- **Any new code emitter must escape for its target language.**
+  `emit-csharp.ts` once interpolated a JSON key straight into a
+  `[JsonPropertyName("…")]` string literal: a key containing `"` or `\`
+  produced C# that failed to compile (CS1003/CS1009), and a key with a
+  newline broke the literal outright (CS1010). `csharpString()` now escapes
+  `\`, `"`, maps `\n`/`\r`/`\t`, and emits `\uXXXX` for other control
+  characters; `emit-typescript.ts` already gets this right via
+  `JSON.stringify`. Same lesson as `safeLink` above, one layer over: text
+  written into a generated program, not just a generated document, needs
+  escaping for *that* target's syntax.
 - **Mermaid fences export as raster images, on purpose.** ` ```mermaid `
   blocks in Markdown become PNGs: mermaid draws the SVG in the browser, a
   canvas rasterizes it at 3x, pdfmake gets an `image` node
@@ -126,6 +145,18 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   splits it out of the main bundle. jsdom can't run mermaid (no layout or
   canvas), so unit tests inject a fake renderer and `renderMermaidToPng`
   itself is verified against the dev server.
+- **`sql-formatter` is dynamically imported**, like pdfmake and mermaid — a
+  74.4 kB gzipped chunk (`prettify-sql.tsx`) that shouldn't ship to every
+  visitor who never opens Prettify SQL. Its loader effect calls
+  `setFormat(() => fn)`, not `setFormat(fn)`: a React state setter runs a
+  function argument as a reducer over the previous state, so passing the
+  loaded formatter directly would call it with the old state instead of
+  storing it.
+- **Keep README's tool list in sync with `ROADMAP`** in
+  `src/components/roadmap.ts`. The README doesn't read from the roadmap
+  data, so a widget that ships without a README update leaves the README
+  still calling it "Planned" (or omitting it) even once the Welcome window
+  reports the roadmap 100% implemented.
 
 ## Dev server
 

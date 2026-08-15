@@ -3,7 +3,7 @@ import { Widget } from "@/components/widget";
 
 type FormatFn = (sql: string) => string;
 
-// sql-formatter is ~45 kB gzipped and widgetRegistry imports every widget
+// sql-formatter is 74.4 kB gzipped and widgetRegistry imports every widget
 // statically, so a plain import would ship it to everyone who never opens
 // this tool. Loading it dynamically keeps it in its own chunk, the way
 // pdfmake and mermaid are handled. The promise is module-level so a second
