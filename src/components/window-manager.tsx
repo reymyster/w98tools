@@ -1,6 +1,7 @@
 import { type ComponentType, memo } from "react";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
+import { JsonToTypes as JsonToTypesWidget } from "@/components/widgets/json-to-types";
 import { JwtDecoder as JwtDecoderWidget } from "@/components/widgets/jwt-decoder";
 import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
@@ -20,6 +21,7 @@ import { useWindowMangager, type WidgetType } from "./window-store";
 // content through the store and their own state.
 const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   Help: memo(HelpWidget),
+  JsonToTypes: memo(JsonToTypesWidget),
   JwtDecoder: memo(JwtDecoderWidget),
   PrettifyJson: memo(PrettifyJSONWidget),
   PrettifySql: memo(PrettifySQLWidget),

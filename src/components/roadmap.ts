@@ -36,7 +36,10 @@ export const ROADMAP: RoadmapGroup[] = [
   },
   {
     group: "Developer",
-    entries: [{ label: "JWT Decoder", widget: "JwtDecoder" }],
+    entries: [
+      { label: "JSON to Types", widget: "JsonToTypes" },
+      { label: "JWT Decoder", widget: "JwtDecoder" },
+    ],
   },
   {
     group: "Export",

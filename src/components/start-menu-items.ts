@@ -67,7 +67,10 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     label: "Developer",
     icon: developerIcon,
-    submenu: [{ label: "JWT Decoder", widget: "JwtDecoder" }],
+    submenu: [
+      { label: "JSON to Types", widget: "JsonToTypes" },
+      { label: "JWT Decoder", widget: "JwtDecoder" },
+    ],
   },
   {
     label: "PDF Exporter",
