@@ -7,7 +7,9 @@ import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { SplitJoin as SplitJoinWidget } from "@/components/widgets/split-join";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
+import { ErrorBoundary } from "./error-boundary";
 import { StartBar } from "./start-bar";
+import { WidgetCrashed } from "./widget-crashed";
 import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
 import { PrettifySql as PrettifySQLWidget } from "./widgets/prettify-sql";
 import { useWindowMangager, type WidgetType } from "./window-store";
@@ -40,7 +42,20 @@ export function WindowManager() {
         {windows.map((w) => {
           const WidgetComponent = widgetRegistry[w.type];
 
-          return <WidgetComponent key={w.id} id={w.id} />;
+          // Each widget gets its own boundary so a throw in one window's
+          // render unmounts only that window -- every other open window
+          // keeps rendering and keeps its state. See CLAUDE.md.
+          return (
+            <ErrorBoundary
+              key={w.id}
+              label={w.type}
+              fallback={(error, reset) => (
+                <WidgetCrashed windowID={w.id} error={error} reset={reset} />
+              )}
+            >
+              <WidgetComponent id={w.id} />
+            </ErrorBoundary>
+          );
         })}
       </main>
       <StartBar />

@@ -51,14 +51,20 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   `process` bare — without the define, dragging or maximizing a window throws
   and unmounts the whole app to a white page. Production builds were never
   affected.
-- **There is no error boundary anywhere in `src/`.** `main.tsx` renders
-  `<App/>` bare, so any throw during a widget's render — not just the
-  `DRAGGABLE_DEBUG` case above — unmounts the *entire* window tree to a
-  white page, losing every open window's state. `Intl.RelativeTimeFormat`
-  throwing on a `1e400` claim decoded from a pasted JWT, and `inferRoot`
-  overflowing the call stack on deeply-nested pasted JSON, both did this
-  before they were guarded. Any widget that parses untrusted input (JWTs,
-  JSON, SQL, …) must catch its own errors — a malformed paste is expected
+- **Each widget is wrapped in its own error boundary.** `window-manager.tsx`
+  wraps every rendered widget in `ErrorBoundary`
+  (`src/components/error-boundary.tsx`), so a throw during one widget's
+  render only unmounts that window — its fallback, `WidgetCrashed`
+  (`src/components/widget-crashed.tsx`), renders as a real `Widget` with a
+  Retry button wired to the boundary's `reset`. `main.tsx` adds a second,
+  app-level boundary around `<App/>` as a last resort for a throw in the
+  shell itself (e.g. the start bar), showing a brief message and a reload
+  button. This contains a crash; it doesn't replace guarding parsers.
+  `Intl.RelativeTimeFormat` throwing on a `1e400` claim decoded from a
+  pasted JWT, and `inferRoot` overflowing the call stack on deeply-nested
+  pasted JSON, were both fixed at the source rather than left for the
+  boundary to catch. Any widget that parses untrusted input (JWTs, JSON,
+  SQL, …) should still catch its own errors — a malformed paste is expected
   input for these tools, not an exotic case worth letting escape render.
 - **`build.cssMinify` is pinned to `esbuild`.** Vite 8 defaults to lightningcss,
   which rejects the malformed `@media (not(hover))` rule shipped inside
