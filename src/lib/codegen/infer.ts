@@ -31,10 +31,37 @@ export function pascalCase(key: string): string {
   return /^[0-9]/.test(joined) ? `_${joined}` : joined;
 }
 
+/** Words spelled the same in singular and plural. */
+const INVARIANT_WORDS = new Set(["series", "species"]);
+
+/**
+ * Common words whose singular already ends in "-ie" — pluralized by adding
+ * just "s", not by the "consonant + y -> consonant + ies" pattern that
+ * "category" -> "categories" follows. Both patterns end in "-ies", so the
+ * general rule below can't tell them apart without this list.
+ */
+const IE_SINGULARS = new Set([
+  "movie",
+  "cookie",
+  "calorie",
+  "zombie",
+  "selfie",
+  "rookie",
+  "genie",
+  "veggie",
+  "auntie",
+  "birdie",
+]);
+
 /** Best-effort English singularization, used only to name array element types. */
 export function singularize(word: string): string {
+  if (INVARIANT_WORDS.has(word.toLowerCase())) return word;
   if (/ss$/i.test(word)) return word;
-  if (/ies$/i.test(word) && word.length > 3) return `${word.slice(0, -3)}y`;
+  if (/ies$/i.test(word) && word.length > 3) {
+    const dropS = word.slice(0, -1);
+    if (IE_SINGULARS.has(dropS.toLowerCase())) return dropS;
+    return `${word.slice(0, -3)}y`;
+  }
   if (/(s|x|z|ch|sh)es$/i.test(word)) return word.slice(0, -2);
   if (/s$/i.test(word) && word.length > 1) return word.slice(0, -1);
   return word;
@@ -57,8 +84,13 @@ function signatureOf(node: TypeNode): string {
 }
 
 function propertiesSignature(properties: Property[]): string {
+  // Sorted so two objects with the same keys/types compare equal regardless
+  // of the order those keys appeared in the source JSON. The *declaration*
+  // (the `properties` array itself) keeps its original order — only this
+  // dedup key is order-independent.
   return properties
     .map((property) => `${property.jsonKey}:${signatureOf(property.type)}`)
+    .sort()
     .join(",");
 }
 
@@ -177,6 +209,39 @@ function isPlainObject(value: unknown): boolean {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Marks every object type reachable from `node`, directly or through the
+ * properties of reachable objects. Conflicting array-element shapes fall
+ * back to unknown in `unify`, but both candidate object types were already
+ * registered before unification ran — this is how they get pruned back out.
+ */
+function markReachable(
+  node: TypeNode,
+  byName: Map<string, ObjectType>,
+  reachable: Set<string>,
+): void {
+  if (node.kind === "array") {
+    markReachable(node.element, byName, reachable);
+    return;
+  }
+  if (node.kind !== "object" || reachable.has(node.ref)) return;
+
+  reachable.add(node.ref);
+  const object = byName.get(node.ref);
+  if (!object) return;
+  for (const property of object.properties) {
+    markReachable(property.type, byName, reachable);
+  }
+}
+
+/** Every object type reachable from `root`, in the order given. */
+function reachableObjects(root: TypeNode, objects: ObjectType[]): ObjectType[] {
+  const byName = new Map(objects.map((object) => [object.name, object]));
+  const reachable = new Set<string>();
+  markReachable(root, byName, reachable);
+  return objects.filter((object) => reachable.has(object.name));
+}
+
 export type InferOutcome =
   | { ok: true; result: InferResult }
   | { ok: false; error: string };
@@ -199,5 +264,8 @@ export function inferRoot(value: unknown, rootName: string): InferOutcome {
   };
 
   const root = inferValue(value, rootName, ctx);
-  return { ok: true, result: { root, objects: ctx.objects } };
+  return {
+    ok: true,
+    result: { root, objects: reachableObjects(root, ctx.objects) },
+  };
 }

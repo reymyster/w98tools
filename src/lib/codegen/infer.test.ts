@@ -55,6 +55,26 @@ describe("singularize", () => {
   it("leaves an already-singular word alone", () => {
     expect(singularize("Person")).toBe("Person");
   });
+
+  it("keeps a plural whose singular already ends in -ie", () => {
+    expect(singularize("Movies")).toBe("Movie");
+    expect(singularize("Cookies")).toBe("Cookie");
+  });
+
+  it("leaves an invariant word unchanged", () => {
+    expect(singularize("Series")).toBe("Series");
+  });
+
+  it("still turns the common -ies words into y", () => {
+    expect(singularize("Categories")).toBe("Category");
+    expect(singularize("Entries")).toBe("Entry");
+    expect(singularize("Properties")).toBe("Property");
+    expect(singularize("Companies")).toBe("Company");
+    expect(singularize("Countries")).toBe("Country");
+    expect(singularize("Queries")).toBe("Query");
+    expect(singularize("Dependencies")).toBe("Dependency");
+    expect(singularize("Activities")).toBe("Activity");
+  });
 });
 
 describe("inferRoot", () => {
@@ -142,6 +162,18 @@ describe("inferRoot", () => {
     expect(root.properties[0].type).toEqual(root.properties[1].type);
   });
 
+  it("deduplicates identically shaped objects regardless of key order", () => {
+    const result = infer(
+      '{"shipping":{"city":"x","zip":"y"},"billing":{"zip":"a","city":"b"}}',
+    );
+
+    // Same two keys mapped to the same types, just listed in a different
+    // order — this must still dedupe to one shared shape plus Root.
+    expect(result.objects).toHaveLength(2);
+    const root = declarationOrder(result)[0];
+    expect(root.properties[0].type).toEqual(root.properties[1].type);
+  });
+
   it("resolves a name collision between different shapes", () => {
     const result = infer('{"a":{"item":{"x":1}},"b":{"item":{"y":1}}}');
     const names = result.objects.map((o) => o.name);
@@ -198,6 +230,16 @@ describe("inferRoot", () => {
 
     expect(result.root).toMatchObject({ kind: "array" });
     expect(result.objects[0].name).toBe("Person");
+  });
+
+  it("drops object types orphaned by a conflicting array-element unify", () => {
+    const result = infer('{"items":[{"a":1},{"a":"x"}]}');
+
+    // The two element shapes disagree, so the array element falls back to
+    // unknown — neither per-element object type is reachable from Root and
+    // both must be pruned from the result.
+    expect(result.root).toMatchObject({ kind: "object", ref: "Root" });
+    expect(result.objects.map((o) => o.name)).toEqual(["Root"]);
   });
 
   it("rejects a scalar root", () => {
