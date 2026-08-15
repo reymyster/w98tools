@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { implementedPercent, ROADMAP } from "./roadmap";
+import { ROADMAP, toolCounts } from "./roadmap";
 
 describe("roadmap", () => {
   it("counts only entries that have shipped", () => {
-    const percent = implementedPercent([
+    const counts = toolCounts([
       {
         group: "Example",
         entries: [
@@ -15,11 +15,11 @@ describe("roadmap", () => {
       },
     ]);
 
-    expect(percent).toBe(50);
+    expect(counts).toEqual({ shipped: 2, total: 4 });
   });
 
-  it("returns 0 rather than NaN for an empty roadmap", () => {
-    expect(implementedPercent([])).toBe(0);
+  it("returns zero counts rather than throwing for an empty roadmap", () => {
+    expect(toolCounts([])).toEqual({ shipped: 0, total: 0 });
   });
 
   it("keeps every label unique so they are safe as React keys", () => {
@@ -30,14 +30,12 @@ describe("roadmap", () => {
     expect(new Set(groups).size).toBe(groups.length);
   });
 
-  it("reports a percentage derived from the real roadmap", () => {
+  it("reports counts derived from the real roadmap", () => {
     // Guards the drift this replaced: the figure was a hardcoded 14% that
     // nobody updated as tools shipped.
     const entries = ROADMAP.flatMap((g) => g.entries);
     const shipped = entries.filter((e) => e.widget).length;
 
-    expect(implementedPercent()).toBe(
-      Math.round((shipped / entries.length) * 100),
-    );
+    expect(toolCounts()).toEqual({ shipped, total: entries.length });
   });
 });

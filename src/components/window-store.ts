@@ -9,8 +9,12 @@ import { create } from "zustand";
  */
 export type WidgetType =
   | "Help"
+  | "JsonToTypes"
+  | "JwtDecoder"
   | "PrettifyJson"
+  | "PrettifySql"
   | "SearchReplace"
+  | "SplitJoin"
   | "Welcome"
   | "OCR"
   | "PdfExport";

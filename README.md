@@ -9,11 +9,13 @@ Live at [w98tools.vercel.app](https://w98tools.vercel.app).
 ## Tools
 
 - **Search & Replace** — literal (non-regex) find and replace, with character counts
-- **Prettify JSON** — format JSON, with inline validation
 - **Image OCR** — extract text from an uploaded or pasted image, via tesseract.js
+- **Split & Join** — split text on a delimiter and rejoin it on another
+- **Prettify JSON** — format JSON, with inline validation
+- **Prettify SQL** — format SQL, via sql-formatter
+- **JSON to Types** — generate C# or TypeScript types from pasted JSON
+- **JWT Decoder** — decode a JWT's header and payload, entirely client-side
 - **PDF Exporter** — turn text, Markdown or HTML into a PDF sized for a reMarkable
-
-Planned: Split, Prettify SQL.
 
 ## Built with
 

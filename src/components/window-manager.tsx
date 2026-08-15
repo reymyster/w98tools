@@ -1,11 +1,17 @@
 import { type ComponentType, memo } from "react";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
+import { JsonToTypes as JsonToTypesWidget } from "@/components/widgets/json-to-types";
+import { JwtDecoder as JwtDecoderWidget } from "@/components/widgets/jwt-decoder";
 import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
+import { SplitJoin as SplitJoinWidget } from "@/components/widgets/split-join";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
+import { ErrorBoundary } from "./error-boundary";
 import { StartBar } from "./start-bar";
+import { WidgetCrashed } from "./widget-crashed";
 import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
+import { PrettifySql as PrettifySQLWidget } from "./widgets/prettify-sql";
 import { useWindowMangager, type WidgetType } from "./window-store";
 
 // Deliberately not exported: this module exports only its component so Fast
@@ -17,8 +23,12 @@ import { useWindowMangager, type WidgetType } from "./window-store";
 // content through the store and their own state.
 const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   Help: memo(HelpWidget),
+  JsonToTypes: memo(JsonToTypesWidget),
+  JwtDecoder: memo(JwtDecoderWidget),
   PrettifyJson: memo(PrettifyJSONWidget),
+  PrettifySql: memo(PrettifySQLWidget),
   SearchReplace: memo(SearchReplaceWidget),
+  SplitJoin: memo(SplitJoinWidget),
   Welcome: memo(WelcomeWidget),
   OCR: memo(OCRWidget),
   PdfExport: memo(PdfExportWidget),
@@ -32,7 +42,20 @@ export function WindowManager() {
         {windows.map((w) => {
           const WidgetComponent = widgetRegistry[w.type];
 
-          return <WidgetComponent key={w.id} id={w.id} />;
+          // Each widget gets its own boundary so a throw in one window's
+          // render unmounts only that window -- every other open window
+          // keeps rendering and keeps its state. See CLAUDE.md.
+          return (
+            <ErrorBoundary
+              key={w.id}
+              label={w.type}
+              fallback={(error, reset) => (
+                <WidgetCrashed windowID={w.id} error={error} reset={reset} />
+              )}
+            >
+              <WidgetComponent id={w.id} />
+            </ErrorBoundary>
+          );
         })}
       </main>
       <StartBar />
