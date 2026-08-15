@@ -52,6 +52,7 @@ export const MENU_ITEMS: MenuItem[] = [
     submenu: [
       { label: "Image OCR", widget: "OCR" },
       { label: "Search & Replace", widget: "SearchReplace" },
+      { label: "Split & Join", widget: "SplitJoin" },
     ],
   },
   {

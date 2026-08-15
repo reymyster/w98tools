@@ -24,7 +24,7 @@ export const ROADMAP: RoadmapGroup[] = [
     entries: [
       { label: "Search & Replace", widget: "SearchReplace" },
       { label: "Image OCR", widget: "OCR" },
-      { label: "Split" },
+      { label: "Split & Join", widget: "SplitJoin" },
     ],
   },
   {

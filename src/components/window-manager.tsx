@@ -3,6 +3,7 @@ import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
 import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
+import { SplitJoin as SplitJoinWidget } from "@/components/widgets/split-join";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { StartBar } from "./start-bar";
 import { PrettifyJson as PrettifyJSONWidget } from "./widgets/prettify-json";
@@ -21,6 +22,7 @@ const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   PrettifyJson: memo(PrettifyJSONWidget),
   PrettifySql: memo(PrettifySQLWidget),
   SearchReplace: memo(SearchReplaceWidget),
+  SplitJoin: memo(SplitJoinWidget),
   Welcome: memo(WelcomeWidget),
   OCR: memo(OCRWidget),
   PdfExport: memo(PdfExportWidget),

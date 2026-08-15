@@ -12,6 +12,7 @@ export type WidgetType =
   | "PrettifyJson"
   | "PrettifySql"
   | "SearchReplace"
+  | "SplitJoin"
   | "Welcome"
   | "OCR"
   | "PdfExport";
