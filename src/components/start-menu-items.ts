@@ -68,6 +68,7 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Developer",
     icon: developerIcon,
     submenu: [
+      { label: "GUID Generator", widget: "GuidGenerator" },
       { label: "JSON to Types", widget: "JsonToTypes" },
       { label: "JWT Decoder", widget: "JwtDecoder" },
     ],

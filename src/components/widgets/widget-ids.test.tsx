@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
 import type { WidgetType } from "@/components/window-store";
+import { GuidGenerator } from "./guid-generator";
 import { Help } from "./help";
 import { ImageOCR } from "./image-ocr";
 import { JsonToTypes } from "./json-to-types";
@@ -20,6 +21,7 @@ import { Welcome } from "./welcome";
 // without a matching entry here fails to compile, so a future widget can't
 // slip through this coverage the way these six once did.
 const ALL_WIDGETS: Record<WidgetType, ComponentType<{ id: number }>> = {
+  GuidGenerator,
   Help,
   JsonToTypes,
   JwtDecoder,

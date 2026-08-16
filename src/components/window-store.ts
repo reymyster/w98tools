@@ -21,6 +21,7 @@ import { computeLayout } from "@/lib/window-layout";
  * there's no cycle between the store and the widgets that consume it.
  */
 export type WidgetType =
+  | "GuidGenerator"
   | "Help"
   | "JsonToTypes"
   | "JwtDecoder"
