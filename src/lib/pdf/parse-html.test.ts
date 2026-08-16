@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseHtml } from "./parse-html";
+import { PERF_BUDGET_MS } from "./perf-budget";
 import type { DocNode } from "./types";
 
 describe("parseHtml", () => {
@@ -320,6 +321,6 @@ describe("parseHtml", () => {
     const elapsed = performance.now() - start;
 
     expect(nodes.length).toBeGreaterThan(0);
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
   });
 });

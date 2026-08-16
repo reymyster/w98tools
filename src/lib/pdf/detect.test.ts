@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { detectFormat } from "./detect";
+import { PERF_BUDGET_MS } from "./perf-budget";
 
 describe("detectFormat", () => {
   it("detects a full HTML document", () => {
@@ -47,7 +48,7 @@ describe("detectFormat", () => {
     const start = performance.now();
     detectFormat(input);
     const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
   });
 
   it("stays fast on tag-like floods that never close (bounded, not quadratic, scans)", () => {
@@ -59,7 +60,7 @@ describe("detectFormat", () => {
       const start = performance.now();
       detectFormat(flood);
       const elapsed = performance.now() - start;
-      expect(elapsed).toBeLessThan(500);
+      expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
     }
   });
 
@@ -144,6 +145,6 @@ describe("detectFormat", () => {
     const start = performance.now();
     detectFormat(input);
     const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
   });
 });
