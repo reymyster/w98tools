@@ -1,5 +1,12 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { tileableWindows, useWindowMangager } from "./window-store";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SCHEMA_VERSION } from "@/lib/storage";
+import {
+  clampToDesktop,
+  LAYOUT_STORAGE_KEY,
+  tileableWindows,
+  useWindowMangager,
+  type WindowState,
+} from "./window-store";
 
 const store = () => useWindowMangager.getState();
 
@@ -311,5 +318,160 @@ describe("applyLayout", () => {
     store().applyLayout("side-by-side", DESKTOP);
 
     expect(store().windows).toBe(before);
+  });
+});
+
+describe("clampToDesktop", () => {
+  it("leaves in-bounds geometry untouched", () => {
+    expect(clampToDesktop(RECT, DESKTOP)).toEqual(RECT);
+  });
+
+  it("never returns a width or height larger than the desktop", () => {
+    const oversized = { x: 0, y: 0, width: 5000, height: 5000 };
+
+    const clamped = clampToDesktop(oversized, DESKTOP);
+
+    expect(clamped.width).toBeLessThanOrEqual(DESKTOP.width);
+    expect(clamped.height).toBeLessThanOrEqual(DESKTOP.height);
+  });
+
+  it("never returns a negative x or y", () => {
+    const offscreen = { x: -500, y: -500, width: 300, height: 200 };
+
+    const clamped = clampToDesktop(offscreen, DESKTOP);
+
+    expect(clamped.x).toBeGreaterThanOrEqual(0);
+    expect(clamped.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it("pulls a window that hangs off the right/bottom edge back on screen", () => {
+    // A window saved at x: 1500 on a wider desktop, restored on this 1000
+    // wide one -- it must still land fully visible, not merely non-negative.
+    const geometry = { x: 1500, y: 650, width: 300, height: 200 };
+
+    const clamped = clampToDesktop(geometry, DESKTOP);
+
+    expect(clamped.x + clamped.width).toBeLessThanOrEqual(DESKTOP.width);
+    expect(clamped.y + clamped.height).toBeLessThanOrEqual(DESKTOP.height);
+  });
+});
+
+describe("persistence", () => {
+  /** Builds a raw, storage-shaped window record -- not run through
+   * newWindow, since these simulate what a *previous* session wrote. */
+  const persistedWindow = (
+    id: number,
+    overrides: Partial<WindowState> = {},
+  ): WindowState => ({
+    id,
+    type: "Help",
+    zIndex: id,
+    geometry: null,
+    isMinimized: false,
+    isMaximized: false,
+    restore: null,
+    ...overrides,
+  });
+
+  const writePersisted = (
+    windows: unknown,
+    version: number = SCHEMA_VERSION,
+  ) => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({ state: { windows }, version }),
+    );
+  };
+
+  afterEach(() => {
+    localStorage.removeItem(LAYOUT_STORAGE_KEY);
+  });
+
+  it("advances the id counter past every restored id, so new windows never collide", async () => {
+    writePersisted([persistedWindow(4), persistedWindow(7)]);
+
+    await useWindowMangager.persist.rehydrate();
+    store().addWindow("PrettifyJson");
+
+    const ids = store().windows.map((w) => w.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(Math.max(...ids)).toBeGreaterThan(7);
+  });
+
+  it("clamps restored geometry back inside the current desktop", async () => {
+    const originalWidth = window.innerWidth;
+    const originalHeight = window.innerHeight;
+    window.innerWidth = 1000;
+    window.innerHeight = 748; // -48px taskbar => a 700-tall desktop
+
+    try {
+      writePersisted([
+        persistedWindow(9, {
+          geometry: { x: 1500, y: 20, width: 300, height: 200 },
+        }),
+      ]);
+
+      await useWindowMangager.persist.rehydrate();
+
+      const win = store().windows.find((w) => w.id === 9);
+      expect(win?.geometry).not.toBeNull();
+      expect(
+        (win?.geometry?.x ?? 0) + (win?.geometry?.width ?? 0),
+      ).toBeLessThanOrEqual(1000);
+      expect(win?.geometry?.x).toBeGreaterThanOrEqual(0);
+    } finally {
+      window.innerWidth = originalWidth;
+      window.innerHeight = originalHeight;
+    }
+  });
+
+  it("discards a persisted payload from a different schema version", async () => {
+    writePersisted([persistedWindow(4)], SCHEMA_VERSION + 1);
+
+    await useWindowMangager.persist.rehydrate();
+
+    expect(store().windows).toHaveLength(1);
+    expect(store().windows[0].type).toBe("Welcome");
+  });
+
+  it("discards an unparsable persisted payload instead of throwing", async () => {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, "{not valid json");
+
+    await useWindowMangager.persist.rehydrate();
+
+    expect(store().windows).toHaveLength(1);
+    expect(store().windows[0].type).toBe("Welcome");
+  });
+
+  it("discards a structurally invalid persisted payload instead of throwing", async () => {
+    writePersisted("not-an-array");
+
+    await useWindowMangager.persist.rehydrate();
+
+    expect(store().windows).toHaveLength(1);
+    expect(store().windows[0].type).toBe("Welcome");
+  });
+
+  it("persists window records only, no widget content", () => {
+    store().addWindow("PrettifyJson");
+
+    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    expect(raw).toBeTruthy();
+
+    const parsed = JSON.parse(raw ?? "{}");
+    expect(Object.keys(parsed.state)).toEqual(["windows"]);
+
+    const knownKeys = [
+      "id",
+      "type",
+      "zIndex",
+      "geometry",
+      "isMinimized",
+      "isMaximized",
+      "restore",
+    ].sort();
+    for (const w of parsed.state.windows) {
+      expect(Object.keys(w).sort()).toEqual(knownKeys);
+    }
   });
 });
