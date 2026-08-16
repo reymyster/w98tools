@@ -163,17 +163,30 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   data, so a widget that ships without a README update leaves the README
   still calling it "Planned" (or omitting it) even once the Welcome window
   reports the roadmap 100% implemented.
-- **Any dependency change needs the lockfile regenerated, and `npm ci` run,
-  before pushing.** CI runs `npm ci`, which refuses to install when
-  `package.json` and `package-lock.json` disagree — and a plain `npm install`
-  on macOS writes a tree missing the nested `@emnapi/*` packages that
-  `@oxc-parser`, `@oxc-resolver` and `@tailwindcss/oxide`'s `wasm32-wasi`
-  builds resolve to on Linux. CI then dies in under 10 seconds, before lint
-  or a single test runs, with `Missing: @emnapi/core@… from lock file`. This
-  repo has been bitten three times. `npm install --package-lock-only` fixes
-  the tree without touching `node_modules`; `npm ci` locally is the check
-  that actually proves it, because `npm test` passing says nothing about
-  whether the lockfile installs cleanly.
+- **`@emnapi/core` and `@emnapi/runtime` are pinned to 1.11.2 in both
+  `overrides` and `devDependencies`, and both entries are load-bearing.**
+  Three wasm32-wasi fallback packages disagree about them:
+  `@tailwindcss/oxide-wasm32-wasi` asks for `^1.11.1`, while
+  `@oxc-parser/binding-wasm32-wasi` and `@oxc-resolver/binding-wasm32-wasi`
+  pin exactly `1.11.2`. Resolving on macOS dedupes the floating range down
+  onto 1.11.2; on Linux the optional-package set differs, nothing pins it,
+  and it floats to 1.11.3 — so `npm ci` rejects the lock file and CI dies in
+  under 10 seconds, before lint or a single test runs. The `overrides` entry
+  makes the version deterministic across platforms; the `devDependencies`
+  entry is separately required because resolving on macOS otherwise omits
+  `node_modules/@emnapi/runtime` from the lock *entirely* (nothing on this
+  platform needs it), and Linux does. Neither ships in the bundle — they are
+  wasm fallbacks that never load when native bindings are present.
+- **A local `npm ci` does NOT prove CI will install.** It passed on macOS
+  while CI failed on Linux twice in a row, because the two platforms compute
+  different ideal trees from the same `package.json`. Regenerating the lock
+  (`npm install --package-lock-only`, with or without `--prefer-online`,
+  `--os=linux`, or deleting the lock first) does not fix a genuine
+  cross-platform resolution split either — it only cleared 6 of the 8
+  mismatches, and the last two needed the pins above. If CI fails in
+  `npm ci`, read which packages it names and compare their required ranges
+  with `npm view <pkg>@<version> dependencies` before regenerating anything;
+  this repo has burned four commits learning that.
 - **Window geometry lives in the store, and record identity is
   load-bearing.** `widget.tsx` subscribes to its own record via
   `state.windows.find(...)`, never to `state.windows` itself, so every
