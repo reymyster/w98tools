@@ -41,6 +41,7 @@ export const ROADMAP: RoadmapGroup[] = [
       { label: "GUID Generator", widget: "GuidGenerator" },
       { label: "JSON to Types", widget: "JsonToTypes" },
       { label: "JWT Decoder", widget: "JwtDecoder" },
+      { label: "Timestamp", widget: "Timestamp" },
     ],
   },
   {

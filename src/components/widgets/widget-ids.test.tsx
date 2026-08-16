@@ -13,6 +13,7 @@ import { PrettifyJson } from "./prettify-json";
 import { PrettifySql } from "./prettify-sql";
 import { SearchReplace } from "./search-replace";
 import { SplitJoin } from "./split-join";
+import { Timestamp } from "./timestamp";
 import { Welcome } from "./welcome";
 
 // Mirrors widgetRegistry in window-manager.tsx, which can't be imported here
@@ -31,6 +32,7 @@ const ALL_WIDGETS: Record<WidgetType, ComponentType<{ id: number }>> = {
   PrettifySql,
   SearchReplace,
   SplitJoin,
+  Timestamp,
   Welcome,
   OCR: ImageOCR,
   PdfExport,

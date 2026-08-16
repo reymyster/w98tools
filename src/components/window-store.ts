@@ -30,6 +30,7 @@ export type WidgetType =
   | "PrettifySql"
   | "SearchReplace"
   | "SplitJoin"
+  | "Timestamp"
   | "Welcome"
   | "OCR"
   | "PdfExport";

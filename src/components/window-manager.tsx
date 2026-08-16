@@ -8,6 +8,7 @@ import { JwtDecoder as JwtDecoderWidget } from "@/components/widgets/jwt-decoder
 import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { SplitJoin as SplitJoinWidget } from "@/components/widgets/split-join";
+import { Timestamp as TimestampWidget } from "@/components/widgets/timestamp";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { ErrorBoundary } from "./error-boundary";
 import { StartBar } from "./start-bar";
@@ -33,6 +34,7 @@ const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   PrettifySql: memo(PrettifySQLWidget),
   SearchReplace: memo(SearchReplaceWidget),
   SplitJoin: memo(SplitJoinWidget),
+  Timestamp: memo(TimestampWidget),
   Welcome: memo(WelcomeWidget),
   OCR: memo(OCRWidget),
   PdfExport: memo(PdfExportWidget),
