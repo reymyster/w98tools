@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/components/use-persistent-state";
 import { Widget } from "@/components/widget";
 
 type FormatFn = (sql: string) => string;
@@ -44,7 +45,7 @@ function useSqlFormatter(): FormatFn | null {
 }
 
 export function PrettifySql({ id }: { id: number }) {
-  const [txtSource, setSource] = useState("");
+  const [txtSource, setSource] = usePersistentState(id, "source", "");
   const format = useSqlFormatter();
 
   const { txtOutput, valid } = useMemo(() => {

@@ -127,9 +127,9 @@ describe("Widget", () => {
 describe("Widget geometry clamping", () => {
   const rndStyle = () =>
     (
-      screen.getByText("Body content").closest(".react-draggable") as
-        | HTMLElement
-        | null
+      screen
+        .getByText("Body content")
+        .closest(".react-draggable") as HTMLElement | null
     )?.style ?? null;
 
   let originalWidth: number;

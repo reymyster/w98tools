@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { usePersistentState } from "@/components/use-persistent-state";
 import { Widget } from "@/components/widget";
 
 export function SearchReplace({ id }: { id: number }) {
-  const [txtSource, setSource] = useState("");
-  const [txtFind, setFind] = useState("");
-  const [txtReplace, setReplace] = useState("");
+  const [txtSource, setSource] = usePersistentState(id, "source", "");
+  const [txtFind, setFind] = usePersistentState(id, "find", "");
+  const [txtReplace, setReplace] = usePersistentState(id, "replace", "");
   const getFormattedLength = useCallback(
     (s: string) => new Intl.NumberFormat().format(s.length),
     [],

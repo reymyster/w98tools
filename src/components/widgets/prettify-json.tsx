@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePersistentState } from "@/components/use-persistent-state";
 import { Widget } from "@/components/widget";
 
 export function PrettifyJson({ id }: { id: number }) {
-  const [txtSource, setSource] = useState("");
+  const [txtSource, setSource] = usePersistentState(id, "source", "");
 
   // Derived from the source rather than synced via an effect, so there's no
   // extra render pass and no chance of output going stale.

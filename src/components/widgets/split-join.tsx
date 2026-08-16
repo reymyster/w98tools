@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePersistentState } from "@/components/use-persistent-state";
 import { Widget } from "@/components/widget";
 
 type DelimiterChoice = "newline" | "comma" | "tab" | "custom";
@@ -44,12 +45,24 @@ function quoteItem(item: string): string {
 }
 
 export function SplitJoin({ id }: { id: number }) {
-  const [txtSource, setSource] = useState("");
-  const [splitBy, setSplitBy] = useState<DelimiterChoice>("newline");
-  const [joinWith, setJoinWith] = useState<DelimiterChoice>("newline");
-  const [customSplit, setCustomSplit] = useState("");
-  const [customJoin, setCustomJoin] = useState("");
-  const [shouldQuote, setShouldQuote] = useState(false);
+  const [txtSource, setSource] = usePersistentState(id, "source", "");
+  const [splitBy, setSplitBy] = usePersistentState<DelimiterChoice>(
+    id,
+    "splitBy",
+    "newline",
+  );
+  const [joinWith, setJoinWith] = usePersistentState<DelimiterChoice>(
+    id,
+    "joinWith",
+    "newline",
+  );
+  const [customSplit, setCustomSplit] = usePersistentState(
+    id,
+    "customSplit",
+    "",
+  );
+  const [customJoin, setCustomJoin] = usePersistentState(id, "customJoin", "");
+  const [shouldQuote, setShouldQuote] = usePersistentState(id, "quote", false);
 
   const { txtOutput, count } = useMemo(() => {
     const items = splitItems(txtSource, splitBy, customSplit);

@@ -4,6 +4,10 @@ import {
   persist,
   type StateStorage,
 } from "zustand/middleware";
+import {
+  dropWindowContent,
+  sweepContent,
+} from "@/components/use-persistent-state";
 import { KEY_PREFIX, SCHEMA_VERSION } from "@/lib/storage";
 import type { Desktop, LayoutKind } from "@/lib/window-layout";
 import { computeLayout } from "@/lib/window-layout";
@@ -304,6 +308,7 @@ export const useWindowMangager = create<
             ],
           })),
         removeWindow: (id) => {
+          dropWindowContent(id);
           set((prev) => ({
             windows: prev.windows.filter((window) => window.id !== id),
           }));
@@ -394,10 +399,15 @@ export const useWindowMangager = create<
               }),
             };
           }),
-        reset: () =>
+        reset: () => {
+          // An empty live list makes sweepContent remove every content key,
+          // not just the ones belonging to the windows open right now --
+          // exactly what a full reset should do.
+          sweepContent([]);
           set({
             windows: defaultWindows(),
-          }),
+          });
+        },
       };
     },
     {
@@ -420,6 +430,11 @@ export const useWindowMangager = create<
         const windows = sanitizeRestoredWindows(state.windows);
         advancePastRestoredIds(windows);
         storeApi?.setState({ windows });
+        // Runs once, right after the restored window ids are known, so any
+        // content left behind by a window that closed in a previous session
+        // (or was never cleaned up -- see the removeWindow/reset comments
+        // above) doesn't linger in storage forever.
+        sweepContent(windows.map((w) => w.id));
       },
     },
   ),
