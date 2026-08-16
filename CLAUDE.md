@@ -163,6 +163,47 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   data, so a widget that ships without a README update leaves the README
   still calling it "Planned" (or omitting it) even once the Welcome window
   reports the roadmap 100% implemented.
+- **Window geometry lives in the store, and record identity is
+  load-bearing.** `widget.tsx` subscribes to its own record via
+  `state.windows.find(...)`, never to `state.windows` itself, so every
+  action in `window-store.ts` must reuse the object identity of any record
+  it doesn't change (`updateWindow`'s early-return-when-unchanged, and the
+  identical guard in `bringToTop`) — rebuild an untouched record and the
+  window that didn't move re-renders anyway. Crucially, `Rnd` stays
+  uncontrolled during a gesture: geometry is written on `onDragStop` /
+  `onResizeStop`, and there is deliberately no `onDrag` or `onResize`
+  handler, because writing to the store on every animation frame would
+  reintroduce exactly the cascade the `bringToTop` comment warns about.
+  `geometry` also starts `null` — the store can't compute a window's
+  initial rectangle itself, since centring needs the viewport and the
+  preferred size is a prop of the widget — so each widget registers its own
+  on mount, and `registerGeometry` is deliberately idempotent (only writes
+  while `geometry` is still `null`) so a remount, which the per-widget error
+  boundary makes possible, can't yank a window the user has since moved.
+- **`UNTILED_WIDGETS`** in `window-store.ts` is the set of window types a
+  layout command skips — currently just `Welcome`, because it opens on
+  every load and tiling would otherwise arrange a splash screen beside the
+  user's first real tool. It's a set rather than an equality check so the
+  next non-tool window added to the app inherits the exclusion for free.
+- **`window-layout.ts`'s `EDGE = 7` and `SHRINK = 15` constants deliberately
+  mirror the fudge factors already in `widget.tsx`'s `moveAndResize`**, so a
+  window placed by a taskbar layout lands exactly where the existing
+  title-bar context menu's Left Half / Quarters commands would put it.
+  Change one without the other and the two features disagree about where,
+  say, "top right" means.
+- **Two `window-layout-menu.tsx` traps only turned up testing the taskbar
+  menu in a real browser** — unit tests passed straight through both.
+  `usehooks-ts`'s `useOnClickOutside` types its ref parameter as a
+  non-nullable `RefObject<HTMLElement>`, which React 19's `useRef(null)` can
+  no longer satisfy, so click-outside is hand-rolled with a `mousedown`
+  listener instead. And in `start-bar.tsx`, detecting a right-click on empty
+  taskbar space via `e.target === e.currentTarget` silently never matches,
+  because `StartBarWindowList`'s `grow-1` wrapper covers that space for
+  hit-testing even though none of its buttons live there; the check is
+  `e.target.closest("button")` instead. Escape also needs a
+  `document`-level `keydown` listener rather than a per-row `onKeyDown`:
+  opening the popup via right-click never moves focus into it, so a
+  focus-dependent handler would never fire for that path.
 
 ## Dev server
 

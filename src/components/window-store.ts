@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import type { Desktop, LayoutKind } from "@/lib/window-layout";
+import { computeLayout } from "@/lib/window-layout";
 
 /**
  * Window state lives here rather than in window-manager.tsx so that file can
@@ -19,10 +21,27 @@ export type WidgetType =
   | "OCR"
   | "PdfExport";
 
+export type Geometry = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type WindowState = {
   id: number;
   type: WidgetType;
   zIndex: number;
+  /**
+   * Null until the widget mounts and reports the size it wants. The store
+   * can't compute this itself: the centring maths needs the viewport, and the
+   * preferred size is a prop of each widget component.
+   */
+  geometry: Geometry | null;
+  isMinimized: boolean;
+  isMaximized: boolean;
+  /** Geometry to return to when un-maximizing. */
+  restore: Geometry | null;
 };
 
 type WindowManagerState = {
@@ -33,6 +52,15 @@ type WindowManagerAction = {
   addWindow: (type: WidgetType) => void;
   removeWindow: (id: WindowState["id"]) => void;
   bringToTop: (id: WindowState["id"]) => void;
+  registerGeometry: (id: WindowState["id"], geometry: Geometry) => void;
+  setGeometry: (id: WindowState["id"], geometry: Geometry) => void;
+  minimizeWindow: (id: WindowState["id"]) => void;
+  maximizeWindow: (
+    id: WindowState["id"],
+    desktop: { width: number; height: number },
+  ) => void;
+  restoreWindow: (id: WindowState["id"]) => void;
+  applyLayout: (kind: LayoutKind, desktop: Desktop) => void;
   reset: () => void;
 };
 
@@ -48,16 +76,73 @@ function getHighestZIndex(state: WindowManagerState): number {
 let lastWindowId = 0;
 const nextWindowId = () => ++lastWindowId;
 
+function newWindow(type: WidgetType, zIndex: number): WindowState {
+  return {
+    id: nextWindowId(),
+    type,
+    zIndex,
+    geometry: null,
+    isMinimized: false,
+    isMaximized: false,
+    restore: null,
+  };
+}
+
+/**
+ * Replaces exactly one window's record and reuses every other record's object
+ * identity. Widgets subscribe per-window, so rebuilding an untouched record
+ * would re-render a window that did not change -- the same cascade the
+ * bringToTop comment above describes.
+ */
+function updateWindow(
+  state: WindowManagerState,
+  id: number,
+  change: (window: WindowState) => WindowState,
+): WindowManagerState {
+  const target = state.windows.find((w) => w.id === id);
+  if (!target) return state;
+
+  const updated = change(target);
+  if (updated === target) return state;
+
+  return {
+    windows: state.windows.map((w) => (w.id === id ? updated : w)),
+  };
+}
+
+/** Un-maximizes a window, returning it unchanged if it wasn't maximized. */
+function clearMaximized(w: WindowState): WindowState {
+  if (!w.isMaximized) return w;
+  return {
+    ...w,
+    geometry: w.restore ?? w.geometry,
+    restore: null,
+    isMaximized: false,
+  };
+}
+
+/**
+ * Window types a layout command ignores. Welcome opens on every load, so
+ * tiling would otherwise arrange a splash screen beside the user's first real
+ * tool. A set rather than an equality check so the next non-tool window
+ * inherits this for free.
+ */
+export const UNTILED_WIDGETS: ReadonlySet<WidgetType> = new Set(["Welcome"]);
+
+/** Windows a layout applies to, in z-order so the active one lands last. */
+export function tileableWindows(windows: WindowState[]): WindowState[] {
+  return windows
+    .filter((w) => !w.isMinimized && !UNTILED_WIDGETS.has(w.type))
+    .sort((a, b) => a.zIndex - b.zIndex);
+}
+
 export const useWindowMangager = create<
   WindowManagerState & WindowManagerAction
 >((set) => ({
-  windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
+  windows: [newWindow("Welcome", 1)],
   addWindow: (type) =>
     set((prev) => ({
-      windows: [
-        ...prev.windows,
-        { id: nextWindowId(), type, zIndex: getHighestZIndex(prev) + 1 },
-      ],
+      windows: [...prev.windows, newWindow(type, getHighestZIndex(prev) + 1)],
     })),
   removeWindow: (id) => {
     set((prev) => ({
@@ -80,8 +165,71 @@ export const useWindowMangager = create<
       };
     });
   },
+  registerGeometry: (id, geometry) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) =>
+        w.geometry === null ? { ...w, geometry } : w,
+      ),
+    ),
+  setGeometry: (id, geometry) =>
+    set((prev) => updateWindow(prev, id, (w) => ({ ...w, geometry }))),
+  minimizeWindow: (id) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) => {
+        const unmaximized = clearMaximized(w);
+        if (unmaximized.isMinimized) return unmaximized;
+        return { ...unmaximized, isMinimized: true };
+      }),
+    ),
+  maximizeWindow: (id, desktop) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) => {
+        // No registered geometry means no restore point. Maximizing anyway
+        // would store `restore: null`, and clearMaximized's `w.restore ??
+        // w.geometry` fallback would then read the *maximized* full-desktop
+        // rectangle back out, stranding the window at desktop size with no
+        // way back to its original bounds.
+        if (w.geometry === null) return w;
+        return {
+          ...w,
+          isMinimized: false,
+          isMaximized: true,
+          restore: w.geometry,
+          geometry: {
+            x: 0,
+            y: 0,
+            width: desktop.width,
+            height: desktop.height,
+          },
+        };
+      }),
+    ),
+  restoreWindow: (id) =>
+    set((prev) =>
+      updateWindow(prev, id, (w) => {
+        const unmaximized = clearMaximized(w);
+        if (!unmaximized.isMinimized) return unmaximized;
+        return { ...unmaximized, isMinimized: false };
+      }),
+    ),
+  applyLayout: (kind, desktop) =>
+    set((prev) => {
+      const targets = tileableWindows(prev.windows);
+      if (targets.length < 2) return prev;
+
+      const rects = computeLayout(kind, targets.length, desktop);
+      const rectById = new Map(targets.map((w, i) => [w.id, rects[i]]));
+
+      return {
+        windows: prev.windows.map((w) => {
+          const rect = rectById.get(w.id);
+          if (!rect) return w;
+          return { ...w, geometry: rect, isMaximized: false, restore: null };
+        }),
+      };
+    }),
   reset: () =>
     set({
-      windows: [{ id: nextWindowId(), type: "Welcome", zIndex: 1 }],
+      windows: [newWindow("Welcome", 1)],
     }),
 }));
