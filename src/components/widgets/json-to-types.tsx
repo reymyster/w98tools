@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePersistentState } from "@/components/use-persistent-state";
 import { Widget } from "@/components/widget";
 import { type CsharpStyle, emitCsharp } from "@/lib/codegen/emit-csharp";
 import { emitTypeScript } from "@/lib/codegen/emit-typescript";
@@ -7,10 +8,18 @@ import { inferRoot } from "@/lib/codegen/infer";
 type Language = "csharp" | "typescript";
 
 export function JsonToTypes({ id }: { id: number }) {
-  const [txtSource, setSource] = useState("");
-  const [language, setLanguage] = useState<Language>("csharp");
-  const [style, setStyle] = useState<CsharpStyle>("record");
-  const [rootName, setRootName] = useState("Root");
+  const [txtSource, setSource] = usePersistentState(id, "source", "");
+  const [language, setLanguage] = usePersistentState<Language>(
+    id,
+    "language",
+    "csharp",
+  );
+  const [style, setStyle] = usePersistentState<CsharpStyle>(
+    id,
+    "style",
+    "record",
+  );
+  const [rootName, setRootName] = usePersistentState(id, "rootName", "Root");
 
   const { txtOutput, error } = useMemo(() => {
     if (txtSource.trim() === "") return { txtOutput: "", error: null };

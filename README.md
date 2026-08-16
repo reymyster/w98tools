@@ -7,6 +7,12 @@ Windows menu can tile or cascade them for you.
 
 Live at [w98tools.vercel.app](https://w98tools.vercel.app).
 
+The app remembers your open windows and what you typed into them, so a
+reload picks up where you left off — window contents expire after a few
+days so they don't linger forever. The one exception is the JWT Decoder: a
+pasted token is deliberately never written to disk, so it's gone as soon as
+you close the tab.
+
 ## Tools
 
 - **Search & Replace** — literal (non-regex) find and replace, with character counts
