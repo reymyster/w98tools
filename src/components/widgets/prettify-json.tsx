@@ -24,19 +24,19 @@ export function PrettifyJson({ id }: { id: number }) {
       <Widget.Title>Prettify JSON</Widget.Title>
       <Widget.Body className="grid grid-cols-2 gap-1 lg:gap-4 pb-2 lg:pb-4">
         <div className="field-row-stacked">
-          <label htmlFor="txt_source">Original</label>
+          <label htmlFor={`txt_source_${id}`}>Original</label>
           <textarea
             className="h-full w-full"
-            id="txt_source"
+            id={`txt_source_${id}`}
             value={txtSource}
             onChange={(e) => setSource(e.target.value)}
           ></textarea>
         </div>
         <div className="field-row-stacked">
-          <label htmlFor="txt_output">Formatted</label>
+          <label htmlFor={`txt_output_${id}`}>Formatted</label>
           <textarea
             className="h-full w-full"
-            id="txt_output"
+            id={`txt_output_${id}`}
             readOnly={true}
             value={txtOutput}
           ></textarea>

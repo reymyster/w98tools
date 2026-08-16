@@ -129,14 +129,14 @@ export function ImageOCR({ id }: { id: number }) {
       <Widget.Body className="flex flex-col gap-1 lg:gap-4 pb-2 lg:pb-4 overflow-auto">
         <div className="flex justify-between items-center">
           <label
-            htmlFor="ocr-file-upload"
+            htmlFor={`ocr-file-upload-${id}`}
             className="shadow-neumorphic active:shadow-neumorphic-active cursor-pointer h-4 px-2 mx-1"
           >
             Choose File
           </label>
           <input
             type="file"
-            id="ocr-file-upload"
+            id={`ocr-file-upload-${id}`}
             accept="image/*"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
             className="hidden"

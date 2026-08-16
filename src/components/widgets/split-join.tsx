@@ -63,18 +63,18 @@ export function SplitJoin({ id }: { id: number }) {
       <Widget.Title>Split &amp; Join</Widget.Title>
       <Widget.Body className="flex flex-col gap-1 lg:gap-4 pb-2 lg:pb-4">
         <div className="field-row-stacked grow">
-          <label htmlFor="txt_split_source">Source Text</label>
+          <label htmlFor={`txt_split_source_${id}`}>Source Text</label>
           <textarea
             className="h-full"
-            id="txt_split_source"
+            id={`txt_split_source_${id}`}
             value={txtSource}
             onChange={(e) => setSource(e.target.value)}
           ></textarea>
         </div>
         <div className="field-row-stacked grow-0">
-          <label htmlFor="sel_split_by">Split by</label>
+          <label htmlFor={`sel_split_by_${id}`}>Split by</label>
           <select
-            id="sel_split_by"
+            id={`sel_split_by_${id}`}
             value={splitBy}
             onChange={(e) => setSplitBy(e.target.value as DelimiterChoice)}
           >
@@ -86,9 +86,11 @@ export function SplitJoin({ id }: { id: number }) {
         </div>
         {splitBy === "custom" && (
           <div className="field-row-stacked grow-0">
-            <label htmlFor="txt_custom_split">Custom split delimiter</label>
+            <label htmlFor={`txt_custom_split_${id}`}>
+              Custom split delimiter
+            </label>
             <input
-              id="txt_custom_split"
+              id={`txt_custom_split_${id}`}
               type="text"
               value={customSplit}
               onChange={(e) => setCustomSplit(e.target.value)}
@@ -96,9 +98,9 @@ export function SplitJoin({ id }: { id: number }) {
           </div>
         )}
         <div className="field-row-stacked grow-0">
-          <label htmlFor="sel_join_with">Join with</label>
+          <label htmlFor={`sel_join_with_${id}`}>Join with</label>
           <select
-            id="sel_join_with"
+            id={`sel_join_with_${id}`}
             value={joinWith}
             onChange={(e) => setJoinWith(e.target.value as DelimiterChoice)}
           >
@@ -110,9 +112,11 @@ export function SplitJoin({ id }: { id: number }) {
         </div>
         {joinWith === "custom" && (
           <div className="field-row-stacked grow-0">
-            <label htmlFor="txt_custom_join">Custom join delimiter</label>
+            <label htmlFor={`txt_custom_join_${id}`}>
+              Custom join delimiter
+            </label>
             <input
-              id="txt_custom_join"
+              id={`txt_custom_join_${id}`}
               type="text"
               value={customJoin}
               onChange={(e) => setCustomJoin(e.target.value)}
@@ -121,18 +125,18 @@ export function SplitJoin({ id }: { id: number }) {
         )}
         <div className="field-row grow-0">
           <input
-            id="chk_quote"
+            id={`chk_quote_${id}`}
             type="checkbox"
             checked={shouldQuote}
             onChange={(e) => setShouldQuote(e.target.checked)}
           />
-          <label htmlFor="chk_quote">Quote each item</label>
+          <label htmlFor={`chk_quote_${id}`}>Quote each item</label>
         </div>
         <div className="field-row-stacked grow">
-          <label htmlFor="txt_split_output">Output Text</label>
+          <label htmlFor={`txt_split_output_${id}`}>Output Text</label>
           <textarea
             className="h-full"
-            id="txt_split_output"
+            id={`txt_split_output_${id}`}
             readOnly={true}
             value={txtOutput}
           ></textarea>

@@ -20,37 +20,37 @@ export function SearchReplace({ id }: { id: number }) {
       <Widget.Title>Search &amp; Replace</Widget.Title>
       <Widget.Body className="flex flex-col gap-1 lg:gap-4 pb-2 lg:pb-4">
         <div className="field-row-stacked grow">
-          <label htmlFor="txt_source">Source Text</label>
+          <label htmlFor={`txt_source_${id}`}>Source Text</label>
           <textarea
             className="h-full"
-            id="txt_source"
+            id={`txt_source_${id}`}
             value={txtSource}
             onChange={(e) => setSource(e.target.value)}
           ></textarea>
         </div>
         <div className="field-row-stacked grow-0">
-          <label htmlFor="txt_find">Find</label>
+          <label htmlFor={`txt_find_${id}`}>Find</label>
           <input
-            id="txt_find"
+            id={`txt_find_${id}`}
             type="text"
             value={txtFind}
             onChange={(e) => setFind(e.target.value)}
           />
         </div>
         <div className="field-row-stacked grow-0">
-          <label htmlFor="txt_replace">Replace</label>
+          <label htmlFor={`txt_replace_${id}`}>Replace</label>
           <input
-            id="txt_replace"
+            id={`txt_replace_${id}`}
             type="text"
             value={txtReplace}
             onChange={(e) => setReplace(e.target.value)}
           />
         </div>
         <div className="field-row-stacked grow">
-          <label htmlFor="txt_output">Output Text</label>
+          <label htmlFor={`txt_output_${id}`}>Output Text</label>
           <textarea
             className="h-full"
-            id="txt_output"
+            id={`txt_output_${id}`}
             readOnly={true}
             value={txtOutput}
           ></textarea>

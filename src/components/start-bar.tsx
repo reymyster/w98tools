@@ -123,10 +123,13 @@ export function StartBar() {
             return (
               <div
                 key={item.label}
-                // #programs carries position:relative and the ▶ arrow
-                // (#programs > span::after) from App.css.
-                id={item.submenu ? "programs" : undefined}
-                className={cn(ROW, item.separatorAfter && ROW_SEPARATOR)}
+                // .has-submenu carries position:relative and the ▶ arrow
+                // (.has-submenu > span::after) from App.css.
+                className={cn(
+                  ROW,
+                  item.separatorAfter && ROW_SEPARATOR,
+                  item.submenu && "has-submenu",
+                )}
                 role="menuitem"
                 tabIndex={0}
                 aria-haspopup={item.submenu ? "menu" : undefined}

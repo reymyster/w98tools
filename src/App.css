@@ -112,13 +112,13 @@
   }
 }
 
-#programs {
+.has-submenu {
   position: relative;
 }
 
 /* The row content is a <span>; it used to be a <label>, which 98.css gave
    inline-flex/align-items. The span sets those via utility classes. */
-#programs > span::after {
+.has-submenu > span::after {
   content: "";
   border-width: 5px;
   border-style: solid;
@@ -128,6 +128,6 @@
   border-color: transparent transparent transparent black;
 }
 
-#programs:hover > span::after {
+.has-submenu:hover > span::after {
   border-color: transparent transparent transparent white;
 }
