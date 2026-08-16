@@ -12,7 +12,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Window, type WindowContainerProps } from "@/components/window";
-import { useWindowMangager } from "@/components/window-store";
+import { clampToDesktop, useWindowMangager } from "@/components/window-store";
 
 export interface WidgetProps extends WindowContainerProps {
   windowID: number;
@@ -86,18 +86,32 @@ export function Widget({
     height: initialHeight,
   };
 
+  // Clamped for *display* only -- the store keeps the user's saved
+  // rectangle exactly as saved (see sanitizeRestoredWindows in
+  // window-store.ts for why that used to be destructive). A window saved on
+  // a wide monitor and viewed on a shrunk-down browser is fully visible
+  // here without losing the larger size it returns to once the viewport
+  // grows back. Skipped when `bounds` itself is degenerate (0 or negative
+  // width/height -- e.g. before useWindowSize has read a real viewport) so
+  // a bogus reading can't be mistaken for a genuinely tiny desktop and
+  // clamp the window to nothing.
+  const displayGeometry =
+    bounds.width > 0 && bounds.height > 0
+      ? clampToDesktop(geometry, bounds)
+      : geometry;
+
   // isMaximized overrides display to the full desktop regardless of what's
   // stored, the same way the old local state did -- so a drag gesture on a
   // maximized window's title bar stays visually pinned, matching prior
   // behaviour, even though it still writes through to the store below.
-  const widgetWidth = isMaximized ? bounds.width : geometry.width;
+  const widgetWidth = isMaximized ? bounds.width : displayGeometry.width;
   const widgetHeight = isMinimized
     ? 36
     : isMaximized
       ? bounds.height
-      : geometry.height;
-  const widgetX = isMaximized ? 0 : geometry.x;
-  const widgetY = isMaximized ? 0 : geometry.y;
+      : displayGeometry.height;
+  const widgetX = isMaximized ? 0 : displayGeometry.x;
+  const widgetY = isMaximized ? 0 : displayGeometry.y;
 
   const childArray = React.Children.toArray(children);
 

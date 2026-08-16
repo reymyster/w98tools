@@ -218,21 +218,6 @@ export function clampToDesktop(geometry: Geometry, desktop: Desktop): Geometry {
   return { x, y, width, height };
 }
 
-/**
- * Mirrors widget.tsx's `bounds`: the viewport minus the 48px taskbar. Can
- * read as 0x0 -- observed in practice right at rehydration, which runs
- * during this module's own evaluation, earlier than any component mounts
- * and possibly before the browser has attached a real viewport to the
- * document. `null` in that case rather than a bogus reading, so a
- * degenerate desktop can't be mistaken for a genuinely tiny one.
- */
-function currentDesktop(): Desktop | null {
-  const width = window.innerWidth;
-  const height = window.innerHeight - 48;
-  if (width <= 0 || height <= 0) return null;
-  return { width, height };
-}
-
 /** Advances the id counter past every restored id, so the very next
  * addWindow can't mint a duplicate of a window just brought back from
  * storage. This is the one thing this whole persistence feature exists to
@@ -243,28 +228,23 @@ function advancePastRestoredIds(windows: WindowState[]): void {
 }
 
 /**
- * Validates and repairs a just-rehydrated windows value: anything that isn't
- * a well-formed WindowState is dropped, and every surviving geometry/restore
- * rectangle is clamped into the desktop the browser actually has right now,
- * which may be smaller than it was when the layout was saved. Falls back to
- * the default lone Welcome window when nothing survives -- an empty or
- * garbage payload is functionally the same "start fresh" case as a schema
- * mismatch. Skips clamping entirely when the desktop reading itself is
- * degenerate (currentDesktop's null case): trusting the saved geometry as-is
- * is far safer than clamping every window down to a bogus 0x0 desktop.
+ * Validates a just-rehydrated windows value: anything that isn't a
+ * well-formed WindowState is dropped. Falls back to the default lone
+ * Welcome window when nothing survives -- an empty or garbage payload is
+ * functionally the same "start fresh" case as a schema mismatch.
+ *
+ * Deliberately does *not* clamp geometry into the current desktop: that used
+ * to happen here, and because this store persists itself, the clamped
+ * rectangle got written straight back to storage -- opening the app once on
+ * a small screen permanently shrank a layout saved on a bigger one, with no
+ * way back. The saved rectangle is the user's preference and stays exactly
+ * as saved; `clampToDesktop` is now applied at render time instead (see
+ * widget.tsx), so a small viewport constrains what's *shown* without
+ * touching what's *stored*.
  */
 function sanitizeRestoredWindows(value: unknown): WindowState[] {
   const valid = Array.isArray(value) ? value.filter(isWindowState) : [];
-  if (valid.length === 0) return defaultWindows();
-
-  const desktop = currentDesktop();
-  if (!desktop) return valid;
-
-  return valid.map((w) => ({
-    ...w,
-    geometry: w.geometry && clampToDesktop(w.geometry, desktop),
-    restore: w.restore && clampToDesktop(w.restore, desktop),
-  }));
+  return valid.length === 0 ? defaultWindows() : valid;
 }
 
 /**

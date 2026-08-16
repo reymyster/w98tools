@@ -398,27 +398,34 @@ describe("persistence", () => {
     expect(Math.max(...ids)).toBeGreaterThan(7);
   });
 
-  it("clamps restored geometry back inside the current desktop", async () => {
+  it("leaves restored geometry untouched even when it no longer fits the current desktop", async () => {
+    // Regression test for the destructive-clamp bug: rehydration used to
+    // clamp geometry into the current desktop and then persist itself,
+    // permanently shrinking a layout saved on a bigger screen the moment it
+    // was opened on a smaller one, with no way back. Clamping now happens at
+    // render time (see widget.tsx) -- the store's job is only to validate
+    // shape, never to reshape the saved rectangle.
     const originalWidth = window.innerWidth;
     const originalHeight = window.innerHeight;
     window.innerWidth = 1000;
     window.innerHeight = 748; // -48px taskbar => a 700-tall desktop
 
     try {
+      const saved = { x: 1500, y: 20, width: 300, height: 200 };
+      const savedRestore = { x: 20, y: 20, width: 5000, height: 5000 };
       writePersisted([
         persistedWindow(9, {
-          geometry: { x: 1500, y: 20, width: 300, height: 200 },
+          geometry: saved,
+          isMaximized: true,
+          restore: savedRestore,
         }),
       ]);
 
       await useWindowMangager.persist.rehydrate();
 
       const win = store().windows.find((w) => w.id === 9);
-      expect(win?.geometry).not.toBeNull();
-      expect(
-        (win?.geometry?.x ?? 0) + (win?.geometry?.width ?? 0),
-      ).toBeLessThanOrEqual(1000);
-      expect(win?.geometry?.x).toBeGreaterThanOrEqual(0);
+      expect(win?.geometry).toEqual(saved);
+      expect(win?.restore).toEqual(savedRestore);
     } finally {
       window.innerWidth = originalWidth;
       window.innerHeight = originalHeight;

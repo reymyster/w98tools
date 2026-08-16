@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Widget } from "./widget";
 import { useWindowMangager } from "./window-store";
 
@@ -115,5 +115,109 @@ describe("Widget", () => {
     await user.click(screen.getByText("Body content"));
 
     expect(winFor(first.id)?.zIndex).toBeGreaterThan(second.zIndex);
+  });
+});
+
+// Regression coverage for the destructive-clamp bug: a saved rectangle used
+// to get clamped into whatever desktop was current at rehydration, and
+// because the store persists itself, that clamped-down rectangle got written
+// straight back to storage -- permanently. Clamping now happens only in the
+// Rnd size/position this component computes for display; the store's
+// geometry is never touched by the mere act of rendering on a small screen.
+describe("Widget geometry clamping", () => {
+  const rndStyle = () =>
+    (
+      screen.getByText("Body content").closest(".react-draggable") as
+        | HTMLElement
+        | null
+    )?.style ?? null;
+
+  let originalWidth: number;
+  let originalHeight: number;
+
+  beforeEach(() => {
+    originalWidth = window.innerWidth;
+    originalHeight = window.innerHeight;
+  });
+
+  afterEach(() => {
+    window.innerWidth = originalWidth;
+    window.innerHeight = originalHeight;
+  });
+
+  it("fits a saved window fully on screen on a smaller viewport without touching the stored geometry", () => {
+    const id = useWindowMangager.getState().windows[0].id;
+    const saved = { x: 40, y: 40, width: 640, height: 480 };
+    useWindowMangager.getState().setGeometry(id, saved);
+
+    // Too small for the saved 640x480 rectangle on either axis.
+    window.innerWidth = 430;
+    window.innerHeight = 369;
+    renderWidget(id);
+
+    const style = rndStyle();
+    expect(style).not.toBeNull();
+    expect(Number.parseFloat(style?.width ?? "")).toBeLessThanOrEqual(430);
+    // -48px for the taskbar.
+    expect(Number.parseFloat(style?.height ?? "")).toBeLessThanOrEqual(321);
+
+    // Merely rendering on a small desktop must not mutate what's saved.
+    expect(winFor(id)?.geometry).toEqual(saved);
+  });
+
+  it("restores the original size and position once the viewport grows back", () => {
+    const id = useWindowMangager.getState().windows[0].id;
+    const saved = { x: 40, y: 40, width: 640, height: 480 };
+    useWindowMangager.getState().setGeometry(id, saved);
+
+    window.innerWidth = 430;
+    window.innerHeight = 369;
+    renderWidget(id);
+
+    const shrunk = rndStyle();
+    expect(Number.parseFloat(shrunk?.width ?? "")).toBeLessThan(640);
+
+    act(() => {
+      window.innerWidth = 1280;
+      window.innerHeight = 848; // -48px taskbar => an 800-tall desktop
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    const restored = rndStyle();
+    expect(restored?.width).toBe("640px");
+    expect(restored?.height).toBe("480px");
+    expect(restored?.transform).toBe("translate(40px,40px)");
+
+    // The round trip through a small viewport must not have left a mark on
+    // the saved geometry either.
+    expect(winFor(id)?.geometry).toEqual(saved);
+  });
+
+  it("still lets a real drag overwrite the saved geometry, even while the display is clamped", () => {
+    const id = useWindowMangager.getState().windows[0].id;
+    const saved = { x: 40, y: 40, width: 640, height: 480 };
+    useWindowMangager.getState().setGeometry(id, saved);
+
+    // Small enough that the saved rectangle is currently clamped for
+    // display -- the drag below must still be a genuine, store-writing user
+    // action, not something the clamp swallows.
+    window.innerWidth = 430;
+    window.innerHeight = 369;
+    renderWidget(id);
+
+    const handle = screen
+      .getByText("Test Widget")
+      .closest(".title-bar") as HTMLElement;
+    fireEvent.mouseDown(handle, { clientX: 100, clientY: 100, button: 0 });
+    fireEvent.mouseMove(document, { clientX: 150, clientY: 130 });
+    fireEvent.mouseUp(document);
+
+    const after = winFor(id)?.geometry;
+    // onDragStop merges the drag's new x/y into the *saved* (unclamped)
+    // width/height, so a real drag writes through at the saved 640x480 --
+    // not the 430x321 the small viewport clamps it down to for display.
+    expect(after?.width).toBe(640);
+    expect(after?.height).toBe(480);
+    expect(after).not.toEqual(saved);
   });
 });
