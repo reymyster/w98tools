@@ -21,6 +21,8 @@ import { computeLayout } from "@/lib/window-layout";
  * there's no cycle between the store and the widgets that consume it.
  */
 export type WidgetType =
+  | "EncodeDecode"
+  | "GuidGenerator"
   | "Help"
   | "JsonToTypes"
   | "JwtDecoder"
@@ -28,6 +30,7 @@ export type WidgetType =
   | "PrettifySql"
   | "SearchReplace"
   | "SplitJoin"
+  | "Timestamp"
   | "Welcome"
   | "OCR"
   | "PdfExport";

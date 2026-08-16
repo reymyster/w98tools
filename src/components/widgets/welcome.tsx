@@ -65,16 +65,37 @@ export function RoadmapList({ roadmap }: { roadmap: RoadmapGroup[] }) {
   );
 }
 
+// Measured against the rendered list in a browser: a group heading costs
+// ~39px including its margins, each entry ~17px, and the window chrome
+// (title bar + two status rows + body padding) ~65px. Rounded up so the
+// list never quite reaches the scroll threshold.
+const GROUP_HEIGHT = 39;
+const ENTRY_HEIGHT = 17;
+const CHROME_HEIGHT = 70;
+
+// Derived rather than hardcoded, because a hardcoded height was wrong twice:
+// it was sized for the roadmap of the day, and each new batch of widgets
+// silently reintroduced a scrollbar in the one window that exists to show
+// the whole toolbox at a glance. Window.Body still scrolls if the list
+// somehow outgrows this, so there's no ceiling -- this only keeps the common
+// case from regressing every time a tool ships.
+function roadmapHeight(roadmap: RoadmapGroup[]): number {
+  const groups = roadmap.length;
+  const entries = roadmap.reduce((n, group) => n + group.entries.length, 0);
+  return CHROME_HEIGHT + groups * GROUP_HEIGHT + entries * ENTRY_HEIGHT;
+}
+
 export function Welcome({ id }: { id: number }) {
   const { shipped, total } = toolCounts();
   const status =
     shipped === total ? `${total} tools` : `${shipped} of ${total} tools`;
 
   return (
-    // Sized to fit the current roadmap (4 group headings, 8 entries) without
-    // scrolling. Window.Body still scrolls if the list outgrows this, so
-    // there's no ceiling on how far the roadmap can keep growing.
-    <Widget initialHeight={352} initialWidth={280} windowID={id}>
+    <Widget
+      initialHeight={roadmapHeight(ROADMAP)}
+      initialWidth={280}
+      windowID={id}
+    >
       <Widget.Title>Welcome!</Widget.Title>
       <Widget.Body>
         <RoadmapList roadmap={ROADMAP} />

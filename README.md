@@ -20,8 +20,11 @@ you close the tab.
 - **Split & Join** — split text on a delimiter and rejoin it on another
 - **Prettify JSON** — format JSON, with inline validation
 - **Prettify SQL** — format SQL, via sql-formatter
+- **Base64 & URL** — encode or decode Base64, Base64 (URL-safe) and URL text, UTF-8 safe
+- **GUID Generator** — bulk-generate v4 GUIDs in D/N/B/P format, upper or lower case
 - **JSON to Types** — generate C# or TypeScript types from pasted JSON
 - **JWT Decoder** — decode a JWT's header and payload, entirely client-side
+- **Timestamp** — convert between epoch (seconds or milliseconds) and human-readable date formats
 - **PDF Exporter** — turn text, Markdown or HTML into a PDF sized for a reMarkable
 
 ## Built with

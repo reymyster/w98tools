@@ -1,4 +1,6 @@
 import { type ComponentType, memo } from "react";
+import { EncodeDecode as EncodeDecodeWidget } from "@/components/widgets/encode-decode";
+import { GuidGenerator as GuidGeneratorWidget } from "@/components/widgets/guid-generator";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
 import { JsonToTypes as JsonToTypesWidget } from "@/components/widgets/json-to-types";
@@ -6,6 +8,7 @@ import { JwtDecoder as JwtDecoderWidget } from "@/components/widgets/jwt-decoder
 import { PdfExport as PdfExportWidget } from "@/components/widgets/pdf-export";
 import { SearchReplace as SearchReplaceWidget } from "@/components/widgets/search-replace";
 import { SplitJoin as SplitJoinWidget } from "@/components/widgets/split-join";
+import { Timestamp as TimestampWidget } from "@/components/widgets/timestamp";
 import { Welcome as WelcomeWidget } from "@/components/widgets/welcome";
 import { ErrorBoundary } from "./error-boundary";
 import { StartBar } from "./start-bar";
@@ -22,6 +25,8 @@ import { useWindowMangager, type WidgetType } from "./window-store";
 // re-executing their whole body -- widgets track their own z-order and
 // content through the store and their own state.
 const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
+  EncodeDecode: memo(EncodeDecodeWidget),
+  GuidGenerator: memo(GuidGeneratorWidget),
   Help: memo(HelpWidget),
   JsonToTypes: memo(JsonToTypesWidget),
   JwtDecoder: memo(JwtDecoderWidget),
@@ -29,6 +34,7 @@ const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
   PrettifySql: memo(PrettifySQLWidget),
   SearchReplace: memo(SearchReplaceWidget),
   SplitJoin: memo(SplitJoinWidget),
+  Timestamp: memo(TimestampWidget),
   Welcome: memo(WelcomeWidget),
   OCR: memo(OCRWidget),
   PdfExport: memo(PdfExportWidget),
