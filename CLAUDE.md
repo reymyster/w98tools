@@ -163,6 +163,17 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   data, so a widget that ships without a README update leaves the README
   still calling it "Planned" (or omitting it) even once the Welcome window
   reports the roadmap 100% implemented.
+- **Any dependency change needs the lockfile regenerated, and `npm ci` run,
+  before pushing.** CI runs `npm ci`, which refuses to install when
+  `package.json` and `package-lock.json` disagree — and a plain `npm install`
+  on macOS writes a tree missing the nested `@emnapi/*` packages that
+  `@oxc-parser`, `@oxc-resolver` and `@tailwindcss/oxide`'s `wasm32-wasi`
+  builds resolve to on Linux. CI then dies in under 10 seconds, before lint
+  or a single test runs, with `Missing: @emnapi/core@… from lock file`. This
+  repo has been bitten three times. `npm install --package-lock-only` fixes
+  the tree without touching `node_modules`; `npm ci` locally is the check
+  that actually proves it, because `npm test` passing says nothing about
+  whether the lockfile installs cleanly.
 - **Window geometry lives in the store, and record identity is
   load-bearing.** `widget.tsx` subscribes to its own record via
   `state.windows.find(...)`, never to `state.windows` itself, so every
