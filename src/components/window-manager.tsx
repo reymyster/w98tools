@@ -1,4 +1,5 @@
 import { type ComponentType, memo } from "react";
+import { EncodeDecode as EncodeDecodeWidget } from "@/components/widgets/encode-decode";
 import { GuidGenerator as GuidGeneratorWidget } from "@/components/widgets/guid-generator";
 import { Help as HelpWidget } from "@/components/widgets/help";
 import { ImageOCR as OCRWidget } from "@/components/widgets/image-ocr";
@@ -23,6 +24,7 @@ import { useWindowMangager, type WidgetType } from "./window-store";
 // re-executing their whole body -- widgets track their own z-order and
 // content through the store and their own state.
 const widgetRegistry: Record<WidgetType, ComponentType<{ id: number }>> = {
+  EncodeDecode: memo(EncodeDecodeWidget),
   GuidGenerator: memo(GuidGeneratorWidget),
   Help: memo(HelpWidget),
   JsonToTypes: memo(JsonToTypesWidget),
