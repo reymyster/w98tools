@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMarkdown } from "./parse-markdown";
+import { PERF_BUDGET_MS } from "./perf-budget";
 
 describe("parseMarkdown", () => {
   it("maps headings with their level", async () => {
@@ -54,7 +55,7 @@ describe("parseMarkdown", () => {
     const start = performance.now();
     await parseMarkdown(source);
     const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
   });
 
   it("maps mermaid fences to a diagram node", async () => {
@@ -154,7 +155,7 @@ describe("parseMarkdown", () => {
     const start = performance.now();
     await parseMarkdown(input);
     const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
   });
 
   it("drops everything after an unterminated HTML comment", async () => {
