@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SCHEMA_VERSION } from "@/lib/storage";
+import { KEY_PREFIX, listKeys, SCHEMA_VERSION } from "@/lib/storage";
 import {
   clampToDesktop,
   LAYOUT_STORAGE_KEY,
@@ -110,6 +110,33 @@ describe("window store", () => {
     expect(store().windows).toHaveLength(1);
     expect(store().windows[0].type).toBe("Welcome");
     expect(idsBefore).not.toContain(store().windows[0].id);
+  });
+});
+
+describe("reset clears persisted storage", () => {
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("clears this app's keys from both storages but leaves an unrelated key alone", () => {
+    store().addWindow("Help");
+    // Simulate leftover app data: widget content in localStorage (Task 3)
+    // and a JWT decoder token in sessionStorage (this task), neither tied
+    // to a window that's still open.
+    localStorage.setItem(`${KEY_PREFIX}content:999:source`, "leftover");
+    sessionStorage.setItem(`${KEY_PREFIX}content:999:token`, "leftover");
+    // Data belonging to some other app on the same origin -- reset must not
+    // touch this. A blanket `localStorage.clear()` would fail this check.
+    localStorage.setItem("someOtherApp:setting", "keep-me");
+    sessionStorage.setItem("someOtherApp:session", "keep-me-too");
+
+    store().reset();
+
+    expect(listKeys(localStorage, KEY_PREFIX)).toEqual([]);
+    expect(listKeys(sessionStorage, KEY_PREFIX)).toEqual([]);
+    expect(localStorage.getItem("someOtherApp:setting")).toBe("keep-me");
+    expect(sessionStorage.getItem("someOtherApp:session")).toBe("keep-me-too");
   });
 });
 

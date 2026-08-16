@@ -228,6 +228,70 @@ CI runs lint → test → build on pushes to `main` and on PRs.
   `document`-level `keydown` listener rather than a per-row `onKeyDown`:
   opening the popup via right-click never moves focus into it, so a
   focus-dependent handler would never fire for that path.
+- **Three different lifetimes for three different kinds of persisted
+  state**, all via the versioned envelope in `src/lib/storage.ts`. Window
+  layout (`window-store.ts`, key `w98:layout`) lives in `localStorage`
+  indefinitely — it isn't sensitive, and persisting it is the main
+  day-to-day point of this feature. Widget contents (`usePersistentState`,
+  keys `w98:content:<windowID>:<field>`) also go to `localStorage`, but with
+  a 3-day TTL (`CONTENT_TTL_MS`) so idle tabs don't accumulate dead weight
+  forever. The JWT decoder's token field is the one exception:
+  `useSessionState` backs it with `sessionStorage` and no TTL at all — the
+  tab closing *is* the expiry. That field never goes through
+  `usePersistentState`, on purpose: writing a live credential to
+  `localStorage` would never touch the network, but it would let it outlive
+  the tab and sit on disk until something clears it.
+- **The content TTL is checked on *read*, not on write.** `loadValue`
+  compares `savedAt` against `maxAgeMs` only when something asks for the
+  value back — nothing sweeps storage proactively, apart from the rehydrate
+  callback's one-time `sweepContent`. So an expired entry still sits on disk
+  until the app is next opened; the TTL is decluttering, not a privacy
+  guarantee. That gap is exactly why the JWT token doesn't use this path at
+  all: a token could sit unread on disk for the entire TTL window (and
+  beyond, until the app happens to reopen) after `localStorage` would have
+  been the wrong place for it from the first write.
+- **Restoring windows without advancing `lastWindowId` mints duplicate
+  ids.** `window-store.ts`'s id counter starts at 0 on every load — it has
+  no memory of what ran before — so rehydrating persisted windows must call
+  `advancePastRestoredIds` before the next `addWindow`, or a freshly opened
+  window can collide with a restored one. That id is also the React key for
+  the window list, so a collision doesn't just misbehave logically, it drops
+  or duplicates a window in the DOM.
+- **A schema version mismatch discards the persisted payload; it does not
+  migrate it.** Both `window-store.ts`'s `persist` middleware and
+  `storage.ts`'s `loadValue` compare the stored `version` against
+  `SCHEMA_VERSION` and treat anything else as absent — guessing at a
+  migration risks restoring a shape the rest of the app can't make sense of,
+  and discarding costs at most one session's layout or one field's content,
+  which is cheap. If a persisted shape changes (a field added, removed, or
+  retyped on `WindowState`, or on any widget's persisted value), bump
+  `SCHEMA_VERSION` in `storage.ts` — it's shared by both the layout store
+  and widget content, so one bump invalidates everything at once rather than
+  leaving one half validating against a version the other has moved past.
+- **Everything that comes out of Web Storage is untrusted input.** It may
+  have been written by an older version of the app, hand-edited in
+  devtools, or truncated mid-write by a full quota. `storage.ts`'s
+  `isEnvelope` and `window-store.ts`'s `isWindowState`/`isGeometry` are type
+  predicates over `JSON.parse` output, not casts, and every Storage call
+  (`getItem`, `setItem`, `removeItem`) is wrapped in try/catch, because
+  `setItem` throws on quota exhaustion and in Safari private mode, and
+  `getItem` can throw a SecurityError when cookies are blocked. A failed
+  read or write must fall back silently, never throw.
+- **Rehydration runs before any component mounts, and a destructive clamp
+  once caused permanent data loss because of it.** Two real bugs here, both
+  invisible to unit tests because jsdom doesn't reproduce either condition:
+  first, `onRehydrateStorage` fires at module load, before React has
+  rendered anything, so reading `window.innerWidth`/`innerHeight` there can
+  see `0` rather than the real viewport — geometry has to be validated for
+  *shape* at rehydration time, never sized against the viewport then.
+  Second, `sanitizeRestoredWindows` used to call `clampToDesktop` and let
+  the clamped rectangle flow back into the store — which the `persist`
+  middleware then wrote straight back to storage. Opening the app once on a
+  small screen permanently shrank a layout saved on a bigger one, with no
+  way back, because the *stored* value had been overwritten, not just the
+  displayed one. Clamping now happens at render time instead
+  (`clampToDesktop` in `widget.tsx`'s geometry calculation), so a small
+  viewport constrains what's shown without ever touching what's stored.
 
 ## Dev server
 

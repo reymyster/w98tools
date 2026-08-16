@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSessionState } from "@/components/use-persistent-state";
 import { Widget } from "@/components/widget";
 import { decodeJwt, isExpired, relativeFromNow } from "@/lib/jwt";
 
@@ -9,7 +10,10 @@ const TIME_CLAIMS = [
 ] as const;
 
 export function JwtDecoder({ id }: { id: number }) {
-  const [txtToken, setToken] = useState("");
+  // sessionStorage, not usePersistentState's localStorage: a pasted token is
+  // a live credential, and this is the one field in the app that must never
+  // sit on disk. The tab closing is its expiry; there is no TTL to check.
+  const [txtToken, setToken] = useSessionState(id, "token", "");
 
   const decoded = useMemo(
     () => (txtToken.trim() === "" ? null : decodeJwt(txtToken)),

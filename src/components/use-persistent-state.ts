@@ -37,14 +37,16 @@ function parseWindowID(key: string): number | null {
 }
 
 // How long to let a burst of keystrokes settle before writing. Persisting on
-// every keystroke would serialize a whole textarea's contents to
-// localStorage on every character typed, which is wasted work while the user
-// is still mid-sentence.
+// every keystroke would serialize a whole textarea's contents to storage on
+// every character typed, which is wasted work while the user is still
+// mid-sentence.
 const DEBOUNCE_MS = 400;
 
 /**
- * Persists `initial` (and every value it's later set to) under
- * `contentKey(windowID, field)`, with a 3-day TTL (`CONTENT_TTL_MS`).
+ * Shared implementation behind `usePersistentState` and `useSessionState`.
+ * They differ only in which `Storage` backs them and whether the value ever
+ * expires -- everything else (the lazy initial read, the debounced write,
+ * the `pagehide` flush) is identical, so it lives here once.
  *
  * The initial value is read once, synchronously, via a lazy `useState`
  * initialiser rather than an effect -- an effect runs after the first paint,
@@ -58,7 +60,9 @@ const DEBOUNCE_MS = 400;
  * (including bfcache cases `beforeunload` can miss), so it flushes the
  * latest value synchronously as a backstop to the debounce timer.
  */
-export function usePersistentState<T>(
+function usePersistedField<T>(
+  storage: Storage,
+  maxAgeMs: number | null,
   windowID: number,
   field: string,
   initial: T,
@@ -66,7 +70,7 @@ export function usePersistentState<T>(
   const key = contentKey(windowID, field);
 
   const [value, setValue] = useState<T>(() => {
-    const restored = loadValue<T>(localStorage, key, CONTENT_TTL_MS);
+    const restored = loadValue<T>(storage, key, maxAgeMs);
     return restored === undefined ? initial : restored;
   });
 
@@ -82,20 +86,58 @@ export function usePersistentState<T>(
     latest.current = { key, value };
 
     const timer = setTimeout(() => {
-      saveValue(localStorage, key, value);
+      saveValue(storage, key, value);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [key, value]);
+  }, [storage, key, value]);
 
   useEffect(() => {
     const flush = () => {
-      saveValue(localStorage, latest.current.key, latest.current.value);
+      saveValue(storage, latest.current.key, latest.current.value);
     };
     window.addEventListener("pagehide", flush);
     return () => window.removeEventListener("pagehide", flush);
-  }, []);
+  }, [storage]);
 
   return [value, setValue];
+}
+
+/**
+ * Persists `initial` (and every value it's later set to) under
+ * `contentKey(windowID, field)` in `localStorage`, with a 3-day TTL
+ * (`CONTENT_TTL_MS`). This is the default for widget content: it survives a
+ * closed tab or a restarted browser, which is what makes it convenient, and
+ * exactly why it must never hold anything a user wouldn't want sitting on
+ * disk indefinitely (see `useSessionState` below for that case).
+ */
+export function usePersistentState<T>(
+  windowID: number,
+  field: string,
+  initial: T,
+): [T, (value: T) => void] {
+  return usePersistedField(
+    localStorage,
+    CONTENT_TTL_MS,
+    windowID,
+    field,
+    initial,
+  );
+}
+
+/**
+ * Session-scoped counterpart to `usePersistentState`: same envelope, same
+ * debounce-then-flush-on-pagehide behaviour, but backed by `sessionStorage`
+ * and with no TTL at all -- `maxAgeMs: null`, since the tab closing is the
+ * expiry. Reserved for the JWT decoder's token field, which must survive an
+ * accidental reload (the case a user actually hits) but must never touch
+ * disk the way `localStorage` would.
+ */
+export function useSessionState<T>(
+  windowID: number,
+  field: string,
+  initial: T,
+): [T, (value: T) => void] {
+  return usePersistedField(sessionStorage, null, windowID, field, initial);
 }
 
 /** Removes every field persisted for `windowID`. Called when its window
@@ -124,6 +166,22 @@ export function sweepContent(liveWindowIDs: number[]): void {
     const id = parseWindowID(key);
     if (id === null || !live.has(id)) {
       removeValue(localStorage, key);
+    }
+  }
+}
+
+/**
+ * Removes every key under `KEY_PREFIX` from both `localStorage` and
+ * `sessionStorage` -- widget content, the window layout, and the JWT
+ * decoder's session-only token alike. Reset Windows calls this rather than
+ * `localStorage.clear()`, which would also erase whatever unrelated data
+ * another app on the same origin has stored; scoping the removal to this
+ * app's prefix is what keeps that safe.
+ */
+export function clearPersistedState(): void {
+  for (const storage of [localStorage, sessionStorage]) {
+    for (const key of listKeys(storage, KEY_PREFIX)) {
+      removeValue(storage, key);
     }
   }
 }

@@ -5,6 +5,7 @@ import {
   type StateStorage,
 } from "zustand/middleware";
 import {
+  clearPersistedState,
   dropWindowContent,
   sweepContent,
 } from "@/components/use-persistent-state";
@@ -400,13 +401,15 @@ export const useWindowMangager = create<
             };
           }),
         reset: () => {
-          // An empty live list makes sweepContent remove every content key,
-          // not just the ones belonging to the windows open right now --
-          // exactly what a full reset should do.
-          sweepContent([]);
           set({
             windows: defaultWindows(),
           });
+          // Removes every w98:-prefixed key from both storages -- content,
+          // the layout entry `set` above just rewrote, and the JWT
+          // decoder's sessionStorage-only token -- rather than a blanket
+          // localStorage.clear(), which would also erase unrelated data
+          // belonging to another app on this origin.
+          clearPersistedState();
         },
       };
     },

@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentKey } from "@/components/use-persistent-state";
+import { loadValue } from "@/lib/storage";
 import { JwtDecoder } from "./jwt-decoder";
 
 const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
@@ -38,6 +40,11 @@ describe("JwtDecoder", () => {
     // at the test's default 5s even with `advanceTimers` wired up.
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(NOW);
+    // The token field now persists to sessionStorage (see below); starting
+    // each test from an empty storage keeps them from reading a token a
+    // previous test left behind.
+    localStorage.clear();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -141,5 +148,61 @@ describe("JwtDecoder", () => {
     // The app must still be rendering the widget, not a white page.
     expect(screen.getByLabelText("Token")).toBeInTheDocument();
     expect(JSON.parse(payload().value)).toEqual({ exp: null });
+  });
+});
+
+describe("JwtDecoder token persistence", () => {
+  const secretToken = () =>
+    makeToken({ alg: "HS256" }, { sub: "very-secret-subject" });
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("keeps the token in sessionStorage and restores it after a remount", async () => {
+    const user = setup();
+    const secret = secretToken();
+    const first = render(<JwtDecoder id={11} />);
+
+    await user.click(token());
+    await user.paste(secret);
+
+    // pagehide is the same event a real reload fires; the hook's flush
+    // handler saves synchronously on it instead of waiting out the
+    // debounce, so there's no need to advance real time in this test.
+    window.dispatchEvent(new Event("pagehide"));
+    first.unmount();
+
+    expect(loadValue(sessionStorage, contentKey(11, "token"), null)).toBe(
+      secret,
+    );
+
+    render(<JwtDecoder id={11} />);
+    expect(token()).toHaveValue(secret);
+  });
+
+  it("never writes the token into localStorage, under any key", async () => {
+    const user = setup();
+    const secret = secretToken();
+    render(<JwtDecoder id={12} />);
+
+    await user.click(token());
+    await user.paste(secret);
+    window.dispatchEvent(new Event("pagehide"));
+
+    // Every key, not just contentKey(12, "token"): the point of this test
+    // is to catch the token leaking under a *different* key, which a
+    // narrower assertion would miss entirely.
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i) ?? "";
+      expect(localStorage.getItem(key)).not.toContain(secret);
+    }
   });
 });
