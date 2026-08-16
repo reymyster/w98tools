@@ -45,29 +45,29 @@ export function JwtDecoder({ id }: { id: number }) {
       <Widget.Title>JWT Decoder</Widget.Title>
       <Widget.Body className="flex flex-col gap-1 lg:gap-4 pb-2 lg:pb-4">
         <div className="field-row-stacked grow-0">
-          <label htmlFor="txt_jwt">Token</label>
+          <label htmlFor={`txt_jwt_${id}`}>Token</label>
           <textarea
             className="h-24 font-mono text-xs"
-            id="txt_jwt"
+            id={`txt_jwt_${id}`}
             value={txtToken}
             onChange={(e) => setToken(e.target.value)}
           ></textarea>
         </div>
         <div className="grid grid-cols-2 gap-1 lg:gap-4 grow min-h-0">
           <div className="field-row-stacked">
-            <label htmlFor="txt_jwt_header">Header</label>
+            <label htmlFor={`txt_jwt_header_${id}`}>Header</label>
             <textarea
               className="h-full w-full"
-              id="txt_jwt_header"
+              id={`txt_jwt_header_${id}`}
               readOnly={true}
               value={decoded ? JSON.stringify(decoded.header, null, 2) : ""}
             ></textarea>
           </div>
           <div className="field-row-stacked">
-            <label htmlFor="txt_jwt_payload">Payload</label>
+            <label htmlFor={`txt_jwt_payload_${id}`}>Payload</label>
             <textarea
               className="h-full w-full"
-              id="txt_jwt_payload"
+              id={`txt_jwt_payload_${id}`}
               readOnly={true}
               value={decoded ? JSON.stringify(decoded.payload, null, 2) : ""}
             ></textarea>
@@ -84,9 +84,11 @@ export function JwtDecoder({ id }: { id: number }) {
         )}
         {decoded && (
           <div className="field-row-stacked grow-0">
-            <label htmlFor="txt_jwt_signature">Signature (not verified)</label>
+            <label htmlFor={`txt_jwt_signature_${id}`}>
+              Signature (not verified)
+            </label>
             <input
-              id="txt_jwt_signature"
+              id={`txt_jwt_signature_${id}`}
               type="text"
               readOnly={true}
               value={decoded.signature}
